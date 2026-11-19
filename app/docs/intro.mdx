@@ -1,0 +1,20 @@
+import { PackageCommand } from '@/components/package-command';
+import { registryOrigin } from '@/site/catalog';
+
+VoiceKit renders audio-reactive interfaces for React voice apps. Each preset uses the same adapter contract, so you can switch a visual without replacing your audio source.
+
+<h2 id="installation">Installation</h2>
+
+Start in an app with React 18 or 19 and initialize shadcn. Use the CLI command below to try Lumen Orb, or open [Silk Strands](/components/silk-strands) for its own install instructions.
+
+<div className="mt-3 max-w-xl">
+  <PackageCommand command={`shadcn@latest add ${registryOrigin}/r/lumen-orb.json`} />
+</div>
+
+<h2 id="theming">Theming</h2>
+
+Pass `theme` to choose Rose Gold, Champagne, Midnight Noir, Emerald Spa, or Blush Pastel. Each finish defines the preset’s `glow`, `highlight`, and `shadow` colors. Use the `colors` prop to override individual values.
+
+<h2 id="adapters">Adapters</h2>
+
+Use `DemoAdapter` for a scripted, credential-free conversation. `MicAdapter` measures microphone input in the browser. `MediaStreamAdapter` measures tracks your app already owns. Choose the LiveKit, ElevenLabs, or Vapi example in a component’s **Usage** section to see how to map a provider’s state and audio.

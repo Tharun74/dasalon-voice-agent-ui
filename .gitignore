@@ -1,0 +1,14 @@
+node_modules/
+dist/
+playground-dist/
+.next/
+.vercel/
+.env
+.env.*
+!.env.example
+next-env.d.ts
+*.tsbuildinfo
+public/r/
+.voicekit-registry.build.json
+*.local
+*.tgz

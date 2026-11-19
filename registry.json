@@ -1,0 +1,161 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "voicekit",
+  "homepage": "http://localhost:3000",
+  "items": [
+    {
+      "name": "voicekit-core",
+      "type": "registry:lib",
+      "title": "VoiceKit Core",
+      "description": "Audio analysis, motion state, themes and provider-agnostic adapters.",
+      "dependencies": [
+        "three"
+      ],
+      "devDependencies": [
+        "@types/three"
+      ],
+      "files": [
+        {
+          "path": "src/types.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/types.ts"
+        },
+        {
+          "path": "src/state.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/state.ts"
+        },
+        {
+          "path": "src/theme.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/theme.ts"
+        },
+        {
+          "path": "src/audio.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/audio.ts"
+        },
+        {
+          "path": "src/motion.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/motion.ts"
+        },
+        {
+          "path": "src/adapters/store.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/adapters/store.ts"
+        },
+        {
+          "path": "src/adapters/demo.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/adapters/demo.ts"
+        },
+        {
+          "path": "src/adapters/mic.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/adapters/mic.ts"
+        },
+        {
+          "path": "src/adapters/media-stream.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/adapters/media-stream.ts"
+        },
+        {
+          "path": "src/adapters/index.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/adapters/index.ts"
+        },
+        {
+          "path": "src/presets/catalog.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/catalog.ts"
+        },
+        {
+          "path": "src/presets/runtime.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/runtime.ts"
+        },
+        {
+          "path": "src/presets/preset.tsx",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/preset.tsx"
+        },
+        {
+          "path": "src/presets/fallback.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/fallback.ts"
+        },
+        {
+          "path": "src/presets/load-scene.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/load-scene.ts"
+        },
+        {
+          "path": "src/presets/webgl.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/webgl.ts"
+        },
+        {
+          "path": "src/presets/scenes/shading.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/shading.ts"
+        },
+        {
+          "path": "src/presets/scenes/sparks.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/sparks.ts"
+        },
+        {
+          "path": "LICENSE-SHADERS",
+          "type": "registry:file",
+          "target": "@components/voicekit/LICENSE-SHADERS"
+        }
+      ],
+      "docs": "Import DemoAdapter, MicAdapter or MediaStreamAdapter from the installed voicekit/adapters directory."
+    },
+    {
+      "name": "lumen-orb",
+      "type": "registry:ui",
+      "title": "Lumen Orb",
+      "description": "An iridescent glass sphere with liquid motion.",
+      "registryDependencies": [
+        "http://localhost:3000/r/voicekit-core.json"
+      ],
+      "files": [
+        {
+          "path": "src/presets/lumen.tsx",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/lumen.tsx"
+        },
+        {
+          "path": "src/presets/scenes/lumen.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/lumen.ts"
+        }
+      ],
+      "docs": "Import LumenOrb from the installed voicekit/presets/lumen module."
+    },
+    {
+      "name": "silk-strands",
+      "type": "registry:ui",
+      "title": "Silk Strands",
+      "description": "Flowing satin ribbons that gather and unfurl with speech.",
+      "registryDependencies": [
+        "http://localhost:3000/r/voicekit-core.json"
+      ],
+      "files": [
+        {
+          "path": "src/presets/silk.tsx",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/silk.tsx"
+        },
+        {
+          "path": "src/presets/scenes/silk.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/silk.ts"
+        }
+      ],
+      "docs": "Import SilkStrands from the installed voicekit/presets/silk module."
+    }
+  ]
+}

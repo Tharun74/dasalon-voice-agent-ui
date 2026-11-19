@@ -1,0 +1,260 @@
+import { AudioEngine, DEFAULT_AUDIO_TUNING, deltaSeconds, smooth } from './audio.js';
+import type { AudioFrame, AudioTuning } from './audio.js';
+import { StateMixer } from './state.js';
+import type { StateWeights } from './state.js';
+import type { VoiceAgentAdapter } from './types.js';
+import type { AgentState } from './types.js';
+import type { PresetName } from './presets/catalog.js';
+
+export interface MotionTuning extends AudioTuning {
+  readonly stiffness: number;
+  readonly damping: number;
+}
+
+export const DEFAULT_MOTION_TUNING: MotionTuning = { ...DEFAULT_AUDIO_TUNING, stiffness: 287, damping: 22 };
+export const MOTION_PROFILES: Readonly<Partial<Record<PresetName, MotionTuning>>> = {
+  lumen: { attack: 0.022, release: 0.235, stiffness: 315, damping: 22, gain: 1.06, latency: 38 },
+  silk: { attack: 0.027, release: 0.278, stiffness: 260, damping: 22, gain: 1.12, latency: 44 },
+};
+
+export function motionTuning(variant: PresetName, override?: Partial<MotionTuning>): MotionTuning {
+  const base = MOTION_PROFILES[variant] ?? DEFAULT_MOTION_TUNING;
+  const bound = (key: keyof MotionTuning, min: number, max: number) => {
+    const value = override?.[key];
+    return typeof value === 'number' && Number.isFinite(value) ? Math.max(min, Math.min(max, value)) : base[key];
+  };
+  return {
+    attack: bound('attack', 0.009, 0.12), release: bound('release', 0.075, 0.60),
+    stiffness: bound('stiffness', 60, 600), damping: bound('damping', 6, 48),
+    gain: bound('gain', .25, 2.5), latency: bound('latency', 0, 80),
+  };
+}
+
+/** Exact spring solution for a target held over this frame, including critical and overdamped cases. */
+export class DampedSpring {
+  velocity = 0;
+  constructor(public value = 0) {}
+
+  step(target: number, dt: number, stiffness: number, damping: number) {
+    if (dt <= 0) return this.value;
+    const displacement = this.value - target;
+    const decay = damping * 0.5;
+    const squared = stiffness - decay * decay;
+    const previousVelocity = this.velocity;
+    const falloff = Math.exp(-decay * dt);
+    let wave: number, integral: number;
+    if (squared > 0.0001) {
+      const frequency = Math.sqrt(squared);
+      wave = Math.cos(frequency * dt) * falloff;
+      integral = Math.sin(frequency * dt) / frequency * falloff;
+    } else if (squared < -0.0001) {
+      const frequency = Math.sqrt(-squared);
+      const one = Math.exp((-decay + frequency) * dt);
+      const two = Math.exp((-decay - frequency) * dt);
+      wave = (one + two) * 0.5;
+      integral = (one - two) / (2 * frequency);
+    } else {
+      wave = falloff;
+      integral = dt * falloff;
+    }
+    this.value = target + displacement * wave + (previousVelocity + decay * displacement) * integral;
+    this.velocity = previousVelocity * wave - (stiffness * displacement + decay * previousVelocity) * integral;
+    return this.value;
+  }
+}
+
+export interface MotionFeatures {
+  readonly inward: number;
+  readonly outward: number;
+  readonly weight: number;
+  readonly sparkle: number;
+  readonly sheen: number;
+  readonly recoil: number;
+  readonly speed: number;
+}
+
+export interface MotionTransport {
+  /** Return simulation seconds, or zero to hold the current frame. */
+  advance(delta: number): number;
+}
+
+export interface MotionPlayback {
+  readonly tuning?: Partial<MotionTuning>;
+  readonly transport?: MotionTransport;
+  readonly onFrame?: (frame: MotionFrame, realDelta: number) => void;
+  /** Render rate ceiling for small previews, with a supported minimum of 20 FPS. */
+  readonly maxFps?: number;
+  /** Device-pixel ratio ceiling for the render surface. */
+  readonly maxPixelRatio?: number;
+}
+
+export interface MotionFrame {
+  readonly time: number;
+  readonly phase: number;
+  readonly breath: number;
+  readonly state: AgentState;
+  readonly weights: StateWeights;
+  readonly audio: AudioFrame;
+  readonly x: number;
+  readonly y: number;
+  readonly attention: number;
+  readonly pulse: number;
+  readonly reducedMotion: boolean;
+  readonly delta: number;
+  readonly features: MotionFeatures;
+  /** Ages of the most recent three output syllable onsets, from newest to oldest. */
+  readonly beats: Float32Array;
+}
+
+export class MotionEngine {
+  private readonly audio = new AudioEngine();
+  private readonly mixer: StateMixer;
+  private readonly features = { inward: 0, outward: 0, weight: 0, sparkle: 0, sheen: 0, recoil: 0, speed: 0.68 };
+  private readonly beats = new Float32Array([9, 9, 9]);
+  private readonly inward = new DampedSpring();
+  private readonly outward = new DampedSpring();
+  private readonly weight = new DampedSpring();
+  private readonly recoil = new DampedSpring();
+  private readonly speed = new DampedSpring(0.68);
+  private readonly frame: {
+    -readonly [Key in keyof MotionFrame]: MotionFrame[Key];
+  };
+  private targetX = 0;
+  private targetY = 0;
+  private targetAttention = 0;
+  private elapsedSincePulse = Infinity;
+  private lastAdapter: VoiceAgentAdapter;
+  private lastOnset = 0;
+  private lastState: AgentState;
+  private recoilCooldown = 0;
+
+  constructor(adapter: VoiceAgentAdapter) {
+    this.lastAdapter = adapter;
+    this.lastState = adapter.state;
+    this.mixer = new StateMixer(adapter.state);
+    this.frame = {
+      time: 0, phase: 0, breath: 0, state: adapter.state, weights: this.mixer.sample(adapter.state, 0), audio: this.audio.sample(adapter, 0),
+      x: 0, y: 0, attention: 0, pulse: 0, reducedMotion: false, delta: 0,
+      features: this.features, beats: this.beats,
+    };
+  }
+
+  point(x: number, y: number) {
+    this.targetX = Math.max(-1, Math.min(1, x));
+    this.targetY = Math.max(-1, Math.min(1, y));
+    this.targetAttention = 1;
+  }
+
+  release() {
+    this.targetX = this.targetY = this.targetAttention = 0;
+  }
+
+  pulse() { this.elapsedSincePulse = 0; }
+
+  peek(): MotionFrame { return this.frame; }
+
+  sample(adapter: VoiceAgentAdapter, delta: number, reducedMotion: boolean, tuning = DEFAULT_MOTION_TUNING): MotionFrame {
+    const dt = deltaSeconds(delta);
+    const frame = this.frame;
+    frame.delta = dt;
+    if (!dt) return frame;
+    if (this.lastAdapter !== adapter) {
+      this.lastAdapter = adapter;
+      this.audio.reset();
+      this.lastOnset = 0;
+      this.beats.fill(9);
+    }
+    const motion = reducedMotion ? 0.18 : 1;
+    this.elapsedSincePulse += dt;
+    frame.time += dt * motion;
+    frame.breath = Math.sin(frame.time * (Math.PI * 2 / 5));
+    frame.x = smooth(frame.x, this.targetX * motion, dt, 0.11);
+    frame.y = smooth(frame.y, this.targetY * motion, dt, 0.11);
+    frame.attention = smooth(frame.attention, this.targetAttention, dt, 0.11);
+    frame.pulse = Math.exp(-this.elapsedSincePulse * 6) * motion;
+    frame.state = adapter.state;
+    frame.weights = this.mixer.sample(frame.state, dt);
+    frame.audio = this.audio.sample(adapter, dt, tuning);
+    frame.reducedMotion = reducedMotion;
+
+    const { input, output } = frame.audio;
+    const { speaking, listening, thinking, muted, error } = frame.weights;
+    const f = this.features;
+    const { stiffness, damping } = tuning;
+    const opener = 0.14 + output.rms * 0.85 + output.onset * 0.09;
+    const focus = 0.29 + input.rms * 0.45;
+    f.inward = Math.max(0, this.inward.step(listening * focus, dt, stiffness * 0.73, damping * 1.04));
+    f.outward = Math.max(0, this.outward.step(speaking * opener, dt, stiffness, damping));
+    f.weight = Math.max(0, this.weight.step(speaking * (output.bass * 0.70 + output.lowMid * 0.4)
+      + listening * input.bass * 0.21, dt, stiffness * 0.88, damping));
+    f.sparkle = smooth(f.sparkle, speaking * (output.treble * 0.85 + output.presence * 0.27
+      + output.onset * 0.22 + Math.max(0, output.peak - output.rms) * 0.25), dt, 0.047);
+    f.sheen = smooth(f.sheen, speaking * output.centroid + listening * input.centroid * .3, dt, 0.104);
+    this.recoilCooldown = Math.max(0, this.recoilCooldown - dt);
+    if (frame.state === 'interrupted' && this.lastState !== 'interrupted' && this.recoilCooldown === 0) {
+      this.recoil.velocity = -11.5;
+      this.recoilCooldown = 0.22;
+    }
+    f.recoil = this.recoil.step(0, dt, stiffness * 1.08, damping * 0.64);
+    this.lastState = frame.state;
+    f.speed = this.speed.step(0.67 + Math.min(1, f.outward) * 0.42 - f.inward * .31 - thinking * .21 - (muted + error) * .25,
+      dt, stiffness * .48, damping * .88);
+    frame.phase += Math.max(.12, f.speed) * dt * motion;
+    for (let i = 0; i < this.beats.length; i++) this.beats[i] = Math.min(9, this.beats[i] + dt * motion);
+    if (output.onsetCount !== this.lastOnset && frame.state === 'speaking') {
+      this.beats[2] = this.beats[1]; this.beats[1] = this.beats[0]; this.beats[0] = 0;
+    }
+    this.lastOnset = output.onsetCount;
+    return frame;
+  }
+}
+
+/** Drives visible stages only. The optional frame interval is in milliseconds. */
+export function observeMotion(element: HTMLElement, draw: (delta: number, reducedMotion: boolean, now: number) => void,
+  frameInterval?: () => number) {
+  const win = element.ownerDocument.defaultView;
+  if (!win) return () => {};
+  const doc = element.ownerDocument;
+  const Observer = win.IntersectionObserver;
+  const preference = win.matchMedia('(prefers-reduced-motion: reduce)');
+  let frame: number | undefined;
+  let last: number | undefined;
+  let visible = !Observer;
+  let reduced = preference.matches;
+
+  function tick(now: number) {
+    frame = win!.requestAnimationFrame(tick);
+    const interval = Math.max(reduced ? 48 : 0, frameInterval?.() ?? 0);
+    // Account for fractional vsync timestamps when an interval spans multiple frames.
+    if (last !== undefined && now - last + 0.75 < interval) return;
+    const delta = last === undefined ? 1 / 60 : (now - last) / 1000;
+    last = now;
+    draw(delta, reduced, now);
+  }
+
+  function sync() {
+    const running = visible && !doc.hidden;
+    if (running && frame === undefined) frame = win!.requestAnimationFrame(tick);
+    if (!running && frame !== undefined) {
+      win!.cancelAnimationFrame(frame);
+      frame = last = undefined;
+    }
+  }
+
+  const observer = Observer ? new Observer(entries => {
+    visible = entries[entries.length - 1].isIntersecting;
+    sync();
+  }) : undefined;
+  observer?.observe(element);
+  const updatePreference = () => { reduced = preference.matches; };
+  preference.addEventListener('change', updatePreference);
+  doc.addEventListener('visibilitychange', sync);
+  sync();
+
+  return () => {
+    observer?.disconnect();
+    if (frame !== undefined) win.cancelAnimationFrame(frame);
+    preference.removeEventListener('change', updatePreference);
+    doc.removeEventListener('visibilitychange', sync);
+  };
+}

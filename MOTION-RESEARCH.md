@@ -1,0 +1,14 @@
+# Motion research
+
+1. Gemini Live treats rhythm, pitch and intonation as distinct signals. Separate phrase energy from finer changes in articulation. [Google](https://blog.google/products-and-platforms/products/gemini/gemini-live-updates-august-2025/)
+2. ChatGPT voice uses a persistent visual anchor. Keep each object recognizable as it moves between listening and speaking. [OpenAI](https://help.openai.com/en/articles/20001274-chatgpt-voice)
+3. Siri’s Apple Intelligence perimeter glow is responsive without filling the display. Use a restrained rim or sheen as the first sign of attention. [Apple](https://www.apple.com/newsroom/2024/10/apple-intelligence-is-available-today-on-iphone-ipad-and-mac/)
+4. Hume EVI treats pauses and conversational turn-taking as expressive context. Let a breath or pause settle into anticipation instead of dropping directly to idle. [Hume EVI](https://github.com/HumeAI/hume-evi-next-js-starter)
+5. Sesame describes timing, interruption and listening as central to conversational presence. Give barge-in its own recoil and then settle inward. [Sesame](https://www.sesame.com/journal/crossing-the-uncanny-valley-of-voice)
+6. LiveKit Aura makes the state legible through the direction and texture of its energy field. Give listening and speaking opposing spatial gestures. [LiveKit](https://livekit.com/products/agents-ui)
+7. ElevenLabs Orb exposes separate input and output levels. Keep distinct channel envelopes and leave thinking independent of both. [ElevenLabs UI source](https://github.com/elevenlabs/ui)
+8. Codrops’ Aether case study uses audio as one layer alongside the geometry and simulation. Reserve syllable onsets for traveling accents and let spring motion carry the main silhouette. [Codrops](https://tympanus.net/codrops/2025/08/06/building-aether-1-sound-without-boundaries/)
+9. Shadertoy’s audio input convention separates the spectrum from the waveform. Use band energy for material detail and use RMS and peak for body motion. [Shadertoy](https://www.shadertoy.com/howto), [shader input implementation](https://sources.debian.org/src/kodi-visualization-shadertoy/21.0.2%2Bds-1/visualization.shadertoy/resources/shaders/input.frag.glsl)
+10. Active Theory keeps depth and interaction coherent through continuous transitions. Integrate velocity into phase so a loud syllable never teleports a shader pattern. [Active Theory studio interview](https://www.webbyawards.com/crafted-with-code/active-theory/)
+11. Lusion uses staggered layers to establish depth and weight. Let the silhouette arrive first and send finer highlights along the surface afterward. [Lusion](https://lusion.co/)
+12. Lusion’s Awwwards portfolio shows restraint between standout moments. Keep a five-second idle breath and reserve the widest overshoot for interruptions and emphasized syllables. [Awwwards](https://www.awwwards.com/sites/lusion-v3)
