@@ -10,7 +10,7 @@ import { cn } from '@/site/utils';
 
 const groups = [
   { name: 'Getting Started', links: [{ name: 'Introduction', href: '/docs' }, { name: 'Installation', href: '/docs#installation' }] },
-  { name: 'Components', links: catalog.map(item => ({ name: item.name, href: item.docs ? `/components/${item.slug}` : `/components#${item.slug}` })) },
+  { name: 'Components', links: catalog.map(item => ({ name: item.name, href: `/components/${item.slug}` })) },
   { name: 'Adapters', links: [{ name: 'Audio sources', href: '/docs#adapters' }] },
   { name: 'Theming', links: [{ name: 'Finishes & colors', href: '/docs#theming' }] },
 ];
@@ -23,7 +23,7 @@ function NavList({ dismiss }: { dismiss?: boolean }) {
         <p className="mb-1 px-2.5 text-xs font-semibold">{group.name}</p>
         {group.links.map(item => {
           const active = pathname === item.href;
-          const link = <Link href={item.href} className={cn('block rounded-md px-2.5 py-1.5 text-[13px] hover:bg-muted hover:text-foreground',
+          const link = <Link href={item.href} prefetch={false} className={cn('block rounded-md px-2.5 py-1.5 text-[13px] hover:bg-muted hover:text-foreground',
             active ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground')} aria-current={active ? 'page' : undefined}>{item.name}</Link>;
           return dismiss ? <SheetClose key={item.href} asChild>{link}</SheetClose> : <span className="block" key={item.href}>{link}</span>;
         })}

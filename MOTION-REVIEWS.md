@@ -35,3 +35,15 @@ Both presets were tuned in the Audio Lab with the same [LibriSpeech recording](h
 **8.5/10 for the reference pair.** Lumen has the clearest state change without labels. Silk’s soft consonants were the weakest signal on the first pass. I lowered the onset threshold, added a refractory interval, and checked the quiet clip again. The gallery’s remaining six presets use the shared signal engine and still need the individual motion pass in Phase 2.
 
 Buffered recordings and the demo can be sampled ahead. Microphones and live provider streams use a bounded slope prediction for output compensation because future samples have yet to arrive. Frame-rate measurements are specific to the tested browser and GPU.
+
+## Silk Strands speaking refinement
+
+Narrow onset peaks stacked into sharp bends. The revised wave spreads across more of each strand, travels more slowly and compresses overlapping peaks. The body spring settles more gently between syllables, and treble adds a smaller change to the satin highlight.
+
+| Parameter | Before | After |
+| --- | ---: | ---: |
+| RMS attack / release | 27 / 278 ms | 36 / 315 ms |
+| Body stiffness / damping | 260 / 22 | 220 / 27 |
+| Syllable ripple travel / fade-in | 2.85 lengths/s / 40 ms | 1.85 lengths/s / 85 ms |
+| Treble highlight multiplier | 0.42 | 0.25 |
+| Gain / output lookahead | 1.12 / 44 ms | 1.03 / 40 ms |

@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { PointerEvent } from 'react';
-import Link from 'next/link';
-import { ArrowUpRight, Play, Search, Square } from 'lucide-react';
+import Link, { useLinkStatus } from 'next/link';
+import { ArrowUpRight, LoaderCircle, Play, Search, Square } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -16,11 +16,24 @@ import { VoiceAgent } from '@/src/VoiceAgent';
 import type { MotionPlayback } from '@/src/motion';
 import { cn } from '@/site/utils';
 
-const previewMotion: MotionPlayback = { maxFps: 30, maxPixelRatio: 1 };
+const previewMotion: MotionPlayback = { maxFps: 60, maxPixelRatio: 1 };
 
-function GalleryTile({ item, demo, eagerPoster }: { item: CatalogEntry; demo: DemoAdapter; eagerPoster: boolean }) {
+function CardLinkIndicator() {
+  const { pending } = useLinkStatus();
+  return pending
+    ? <LoaderCircle aria-hidden="true" className="size-4 shrink-0 text-muted-foreground motion-safe:animate-spin" />
+    : <ArrowUpRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />;
+}
+
+function GalleryTile({ item, demo, eagerPoster, prefetch }: {
+  item: CatalogEntry;
+  demo: DemoAdapter;
+  eagerPoster: boolean;
+  prefetch: boolean;
+}) {
   const preview = useRef<HTMLDivElement>(null);
   const [live, setLive] = useState(false);
+  const [intent, setIntent] = useState(false);
 
   useEffect(() => {
     const element = preview.current;
@@ -47,13 +60,12 @@ function GalleryTile({ item, demo, eagerPoster }: { item: CatalogEntry; demo: De
         {live ? <div className="absolute inset-0"><VoiceAgent variant={item.variant} adapter={demo} size="fill" interactive={false} motion={previewMotion} /></div> : null}
       </div>
       <div className="min-w-0 border-t px-4 py-4">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold tracking-tight">
-            <Link className="after:absolute after:inset-0" href={item.docs ? `/components/${item.slug}` : `/lab?preset=${item.variant}`}
-              prefetch={item.docs ? undefined : false}>{item.name}</Link>
-          </h3>
-          <ArrowUpRight aria-hidden="true" className="size-4 text-muted-foreground transition-colors group-hover:text-foreground" />
-        </div>
+        <h3 className="text-sm font-semibold tracking-tight">
+          <Link className="flex items-center justify-between gap-2 after:absolute after:inset-0" href={`/components/${item.slug}`}
+            prefetch={prefetch || intent} onPointerEnter={() => setIntent(true)} onFocus={() => setIntent(true)}>
+            {item.name}<CardLinkIndicator />
+          </Link>
+        </h3>
         <p className="mt-1 min-h-9 text-[13px] leading-[18px] text-muted-foreground">{item.description}</p>
         <div className="mt-3 flex flex-wrap gap-1.5">
           {item.tags.map(tag => <Badge key={tag} variant="outline" className="rounded-md bg-background text-[10px] font-normal text-muted-foreground">{tag}</Badge>)}
@@ -100,7 +112,8 @@ export function GalleryGrid({ filters = false, limit }: { filters?: boolean; lim
       </div>
     </div> : null}
     {items.length ? <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {items.map((item, index) => <GalleryTile key={item.slug} item={item} demo={demo} eagerPoster={filters && index === 0} />)}
+      {items.map((item, index) => <GalleryTile key={item.slug} item={item} demo={demo}
+        eagerPoster={filters && index === 0} prefetch={filters && index < 2} />)}
     </div> : <p role="status" className="rounded-xl border border-dashed p-8 text-sm text-muted-foreground">No components match this search.</p>}
   </div>;
 }

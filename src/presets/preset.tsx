@@ -70,8 +70,18 @@ function PresetSurface({ variant, load, ...props }: PresetProps & { variant: Pre
     if (!canvas || !context) return;
     let scene: MountedScene | undefined;
     let loadingScene = !!load;
+    let lightweight = false;
     const loading = new AbortController();
+    let clientWidth = canvas.clientWidth;
+    let clientHeight = canvas.clientHeight;
+    const Resize = canvas.ownerDocument.defaultView?.ResizeObserver;
+    const resize = Resize ? new Resize(([entry]) => {
+      clientWidth = entry.contentRect.width;
+      clientHeight = entry.contentRect.height;
+    }) : undefined;
+    resize?.observe(canvas);
     let slow = 0;
+    let stalled = 0;
     let fast = 0;
     let quality = 1;
     let paintedScene: MountedScene | undefined;
@@ -90,19 +100,33 @@ function PresetSurface({ variant, load, ...props }: PresetProps & { variant: Pre
     }
 
     const stop = observeMotion(canvas, (dt, reduced) => {
-      const { clientWidth, clientHeight } = canvas;
+      if (!resize) {
+        clientWidth = canvas.clientWidth;
+        clientHeight = canvas.clientHeight;
+      }
       if (!clientWidth || !clientHeight || canvas.checkVisibility?.({ visibilityProperty: true }) === false) return;
       const current = latest.current;
       const delta = deltaSeconds(current.playback?.transport?.advance(deltaSeconds(dt)) ?? dt);
+      if (scene) {
+        // Persistent GPU stalls can survive resolution scaling, especially on software WebGL.
+        stalled = dt > 0.085 ? stalled + 1 : Math.max(0, stalled - 1);
+        if (stalled >= 5) {
+          scene.dispose();
+          scene = undefined;
+          quality = 1;
+        }
+      }
       if (!reduced && scene) {
         const frameBudget = current.frameIntervalMs / 1000;
         slow = dt > Math.max(0.025, frameBudget * 1.45) ? slow + 1 : Math.max(0, slow - 2);
-        if (slow > 15) { quality = Math.max(0.65, quality - 0.15); slow = 0; }
-        fast = dt < Math.max(0.018, frameBudget * 1.12) ? fast + 1 : 0;
+        if (slow > 8) { quality = Math.max(0.60, quality - 0.15); slow = 0; }
+        fast = dt < Math.max(0.022, frameBudget * 1.12) ? fast + 1 : 0;
         if (fast > 150 && quality < 1) { quality = Math.min(1, quality + 0.10); fast = 0; }
       }
+      lightweight = load ? !loadingScene && !scene : current.maxPixelRatio <= 1;
       const dpr = canvas.ownerDocument.defaultView?.devicePixelRatio ?? 1;
-      const ratio = Math.min(dpr, current.maxPixelRatio, clientWidth < 500 ? 1.5 : 2) * quality;
+      const maxRatio = lightweight ? 0.68 : clientWidth < 500 ? 1.5 : 2;
+      const ratio = Math.min(dpr, current.maxPixelRatio, maxRatio) * quality;
       const pixelWidth = Math.max(1, Math.round(clientWidth * ratio));
       const pixelHeight = Math.max(1, Math.round(clientHeight * ratio));
       const resized = canvas.width !== pixelWidth || canvas.height !== pixelHeight;
@@ -118,7 +142,7 @@ function PresetSurface({ variant, load, ...props }: PresetProps & { variant: Pre
       if (scene?.render(context, pixelWidth, pixelHeight, inputs)) {
         if (canvas.dataset.renderer !== 'webgl') canvas.dataset.renderer = 'webgl';
       } else {
-        drawFallback(context, pixelWidth, pixelHeight, inputs);
+        drawFallback(context, pixelWidth, pixelHeight, inputs, lightweight);
         if (!loadingScene && canvas.dataset.renderer !== 'canvas') canvas.dataset.renderer = 'canvas';
       }
       painted = true;
@@ -126,8 +150,8 @@ function PresetSurface({ variant, load, ...props }: PresetProps & { variant: Pre
       paintedWhileLoading = loadingScene;
       paintedSettings = current;
       if (delta) current.playback?.onFrame?.(inputs.motion, dt);
-    }, () => latest.current.frameIntervalMs);
-    return () => { loading.abort(); stop(); scene?.dispose(); };
+    }, () => Math.max(latest.current.frameIntervalMs, lightweight ? 1000 / 30 : 0));
+    return () => { resize?.disconnect(); loading.abort(); stop(); scene?.dispose(); };
   }, [variant, seed, load, motion]);
 
   function hold(held: boolean) {

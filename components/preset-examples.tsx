@@ -50,7 +50,7 @@ function Example({ item, layout, theme }: { item: CatalogEntry; layout: (typeof 
 }
 
 export function PresetExamples({ item }: { item: CatalogEntry }) {
-  const finishes = item.docs!.finishes;
+  const finishes = item.docs.finishes;
   return <div className="grid gap-3 sm:grid-cols-2">
     {layouts.map(layout => <Example key={layout.title} item={item} layout={layout} theme={finishes[layout.finish]} />)}
   </div>;

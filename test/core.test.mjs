@@ -158,6 +158,33 @@ test('preview cadence preserves elapsed time and discards time spent in a hidden
   stop();
 });
 
+test('visible presets share one frame request and unsubscribe independently', () => {
+  const pending = new Map();
+  let sequence = 0;
+  const preference = Object.assign(new EventTarget(), { matches: false });
+  const document = Object.assign(new EventTarget(), {
+    hidden: false,
+    defaultView: {
+      matchMedia: () => preference,
+      requestAnimationFrame: callback => { pending.set(++sequence, callback); return sequence; },
+      cancelAnimationFrame: handle => pending.delete(handle),
+    },
+  });
+  const frames = [];
+  const drawLumen = observeMotion({ ownerDocument: document }, () => frames.push('lumen'));
+  const drawSilk = observeMotion({ ownerDocument: document }, () => frames.push('silk'));
+  assert.equal(pending.size, 1);
+  pending.get(1)(0);
+  pending.delete(1);
+  assert.deepEqual(frames, ['lumen', 'silk']);
+  drawLumen();
+  pending.get(2)(17);
+  pending.delete(2);
+  assert.deepEqual(frames, ['lumen', 'silk', 'silk']);
+  drawSilk();
+  assert.equal(pending.size, 0);
+});
+
 test('speech changes the body more than the base animation rate, and pausing holds phase', () => {
   const frequency = { bins: new Float32Array(16), sampleRate: 24000 };
   const adapter = {

@@ -156,6 +156,133 @@
         }
       ],
       "docs": "Import SilkStrands from the installed voicekit/presets/silk module."
+    },
+    {
+      "name": "mirror",
+      "type": "registry:ui",
+      "title": "Mirror",
+      "description": "A gilt vanity mirror with ripples in its reflection.",
+      "registryDependencies": [
+        "http://localhost:3000/r/voicekit-core.json"
+      ],
+      "files": [
+        {
+          "path": "src/presets/mirror.tsx",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/mirror.tsx"
+        },
+        {
+          "path": "src/presets/scenes/mirror.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/mirror.ts"
+        }
+      ],
+      "docs": "Import Mirror from the installed voicekit/presets/mirror module."
+    },
+    {
+      "name": "bloom",
+      "type": "registry:ui",
+      "title": "Bloom",
+      "description": "A layered camellia that opens and releases pollen.",
+      "registryDependencies": [
+        "http://localhost:3000/r/voicekit-core.json"
+      ],
+      "files": [
+        {
+          "path": "src/presets/bloom.tsx",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/bloom.tsx"
+        },
+        {
+          "path": "src/presets/scenes/bloom.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/bloom.ts"
+        }
+      ],
+      "docs": "Import Bloom from the installed voicekit/presets/bloom module."
+    },
+    {
+      "name": "prism-halo",
+      "type": "registry:ui",
+      "title": "Prism Halo",
+      "description": "A crown of crystal facets shaped by the audio spectrum.",
+      "registryDependencies": [
+        "http://localhost:3000/r/voicekit-core.json"
+      ],
+      "files": [
+        {
+          "path": "src/presets/prism.tsx",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/prism.tsx"
+        },
+        {
+          "path": "src/presets/scenes/prism.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/prism.ts"
+        }
+      ],
+      "docs": "Import PrismHalo from the installed voicekit/presets/prism module."
+    },
+    {
+      "name": "stardust",
+      "type": "registry:ui",
+      "title": "Stardust",
+      "description": "A cloud of fine particles that gathers and breaks into eddies.",
+      "registryDependencies": [
+        "http://localhost:3000/r/voicekit-core.json"
+      ],
+      "files": [
+        {
+          "path": "src/presets/stardust.tsx",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/stardust.tsx"
+        },
+        {
+          "path": "src/presets/scenes/stardust.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/stardust.ts"
+        }
+      ],
+      "docs": "Import Stardust from the installed voicekit/presets/stardust module."
+    },
+    {
+      "name": "dock-pill",
+      "type": "registry:ui",
+      "title": "Dock Pill",
+      "description": "A compact waveform dock that opens into voice controls.",
+      "registryDependencies": [
+        "http://localhost:3000/r/voicekit-core.json"
+      ],
+      "files": [
+        {
+          "path": "src/presets/dock.tsx",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/dock.tsx"
+        }
+      ],
+      "docs": "Import DockPill from the installed voicekit/presets/dock module."
+    },
+    {
+      "name": "contour",
+      "type": "registry:ui",
+      "title": "Contour",
+      "description": "Polished metal rails that fold through a sculptural knot.",
+      "registryDependencies": [
+        "http://localhost:3000/r/voicekit-core.json"
+      ],
+      "files": [
+        {
+          "path": "src/presets/contour.tsx",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/contour.tsx"
+        },
+        {
+          "path": "src/presets/scenes/contour.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/contour.ts"
+        }
+      ],
+      "docs": "Import Contour from the installed voicekit/presets/contour module."
     }
   ]
 }

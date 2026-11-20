@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Open [localhost:3000](http://localhost:3000). Lumen Orb and Silk Strands have full component pages, including live audio controls and a props playground. The gallery shows all eight presets. The salon example lives at `/examples/salon-landing`.
+Open [localhost:3000](http://localhost:3000). All eight presets have component pages with live audio controls and a props playground. The salon example lives at `/examples/salon-landing`.
 
 ## Audio Lab
 

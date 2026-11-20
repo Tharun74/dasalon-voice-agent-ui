@@ -6,8 +6,8 @@ const TAU = Math.PI * 2;
 
 export function fallbackRenderer(variant: PresetName, seed: number) {
   const random = randomFor(seed);
-  const points = Array.from({ length: 520 }, () => [random() * TAU, Math.sqrt(random()), random()]);
-  return (ctx: CanvasRenderingContext2D, width: number, height: number, inputs: SceneInputs) => {
+  const points = variant === 'stardust' ? Array.from({ length: 520 }, () => [random() * TAU, Math.sqrt(random()), random()]) : [];
+  return (ctx: CanvasRenderingContext2D, width: number, height: number, inputs: SceneInputs, lightweight: boolean) => {
     const { motion, palette } = inputs;
     const { inward, outward, quiet } = energy(inputs);
     const scale = Math.min(width / 285, height / 205);
@@ -40,7 +40,7 @@ export function fallbackRenderer(variant: PresetName, seed: number) {
       body.addColorStop(0.31, '#2a1c2a');
       body.addColorStop(0.84, '#140e19');
       body.addColorStop(1, '#4e303e');
-      ctx.shadowBlur = 24 + outward * 12;
+      ctx.shadowBlur = lightweight ? 0 : 24 + outward * 12;
       ctx.shadowColor = palette.shadow;
       ctx.fillStyle = body;
       ctx.lineWidth = 1.5;
@@ -66,13 +66,14 @@ export function fallbackRenderer(variant: PresetName, seed: number) {
       ctx.moveTo(-74, 5);
       ctx.lineTo(-74, 9);
       ctx.stroke();
-      for (let strand = 0; strand < 6; strand++) {
+      const steps = lightweight ? 36 : 72;
+      for (let strand = 0; strand < (lightweight ? 4 : 6); strand++) {
         ctx.strokeStyle = strand === 0 ? palette.highlight : palette.glow;
         ctx.lineWidth = strand === 0 ? 1.35 : 0.7;
         ctx.globalAlpha = (0.86 - strand * 0.115) * (1 - quiet * 0.48);
         ctx.beginPath();
-        for (let j = 0; j <= 72; j++) {
-          const u = j / 72;
+        for (let j = 0; j <= steps; j++) {
+          const u = j / steps;
           const frame = Math.sin(Math.PI * u);
           const angle = u * 10 + strand * 0.61 - motion.phase * 3.6 - seedPhase;
           const drift = Math.sin(angle) + motion.weights.thinking * 0.35 * Math.sin(angle - phase * 1.4);
@@ -88,7 +89,8 @@ export function fallbackRenderer(variant: PresetName, seed: number) {
       }
     } else if (variant === 'stardust') {
       ctx.rotate(-0.31);
-      for (const [angle, radius, hue] of points) {
+      for (let index = 0; index < points.length; index += lightweight ? 3 : 1) {
+        const [angle, radius, hue] = points[index];
         const offset = angle + phase * (0.1 + hue * 0.24);
         const spread = (35 + radius * 70) * aperture;
         ctx.fillStyle = hue > 0.66 ? palette.highlight : palette.glow;
@@ -136,11 +138,13 @@ export function fallbackRenderer(variant: PresetName, seed: number) {
         ctx.beginPath();
         if (variant === 'silk') {
           ctx.moveTo(-119, -30 + shift * 0.8);
-          ctx.bezierCurveTo(-53, -70 + shift, -30, 58 - shift * aperture, 20, 34 + shift * 0.7 + speak * 14);
+          const fold = outward * Math.sin(phase * 3.6 - strand * 0.15);
+          ctx.bezierCurveTo(-53, -70 + shift, -30, 58 - shift * aperture, 20, 34 + shift * 0.7 + fold * 9);
           ctx.bezierCurveTo(59, 6 + shift + listen * 12, 83, -45 + shift, 120, -48 + shift * 0.55);
         } else {
-          for (let j = 0; j <= 96; j++) {
-            const a = j * TAU / 96;
+          const steps = lightweight ? 48 : 96;
+          for (let j = 0; j <= steps; j++) {
+            const a = j * TAU / steps;
             const radius = (71 + shift * 0.5 + Math.sin(a * 3 + phase * 0.45) * (19 + speak * 13)) * aperture;
             const x = radius * Math.cos(a);
             const y = radius * Math.sin(a) * 0.77 + Math.cos(a * 2) * shift * 0.5;
@@ -153,7 +157,7 @@ export function fallbackRenderer(variant: PresetName, seed: number) {
       }
     } else {
       const radius = (variant === 'mirror' ? 72 : 68) * aperture;
-      ctx.shadowBlur = 22 + outward * 8;
+      ctx.shadowBlur = lightweight ? 0 : 22 + outward * 8;
       ctx.shadowColor = palette.shadow;
       ctx.lineWidth = variant === 'mirror' ? 8 : 1;
       ctx.beginPath();

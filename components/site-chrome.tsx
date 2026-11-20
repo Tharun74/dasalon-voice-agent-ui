@@ -103,7 +103,7 @@ export function SiteHeader() {
         </CommandGroup>
         <CommandGroup heading="Components">
           {catalog.map(item => <CommandItem key={item.slug} value={`${item.name} ${item.tags.join(' ')}`}
-            onSelect={() => go(item.docs ? `/components/${item.slug}` : `/components#${item.slug}`)}><AudioLines />{item.name}</CommandItem>)}
+            onSelect={() => go(`/components/${item.slug}`)}><AudioLines />{item.name}</CommandItem>)}
         </CommandGroup>
       </CommandList>
     </CommandDialog>

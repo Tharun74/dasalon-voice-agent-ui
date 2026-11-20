@@ -14,7 +14,7 @@ export interface MotionTuning extends AudioTuning {
 export const DEFAULT_MOTION_TUNING: MotionTuning = { ...DEFAULT_AUDIO_TUNING, stiffness: 287, damping: 22 };
 export const MOTION_PROFILES: Readonly<Partial<Record<PresetName, MotionTuning>>> = {
   lumen: { attack: 0.022, release: 0.235, stiffness: 315, damping: 22, gain: 1.06, latency: 38 },
-  silk: { attack: 0.027, release: 0.278, stiffness: 260, damping: 22, gain: 1.12, latency: 44 },
+  silk: { attack: 0.036, release: 0.315, stiffness: 220, damping: 27, gain: 1.03, latency: 40 },
 };
 
 export function motionTuning(variant: PresetName, override?: Partial<MotionTuning>): MotionTuning {
@@ -209,6 +209,36 @@ export class MotionEngine {
   }
 }
 
+type FrameCallback = (now: number) => void;
+
+const frameLoops = new WeakMap<Window, { add(draw: FrameCallback): void; remove(draw: FrameCallback): void }>();
+
+function frameLoop(win: Window) {
+  const existing = frameLoops.get(win);
+  if (existing) return existing;
+  const callbacks = new Set<FrameCallback>();
+  let frame: number | undefined;
+  function tick(now: number) {
+    frame = win.requestAnimationFrame(tick);
+    for (const callback of callbacks) callback(now);
+  }
+  const loop = {
+    add(draw: FrameCallback) {
+      callbacks.add(draw);
+      frame ??= win.requestAnimationFrame(tick);
+    },
+    remove(draw: FrameCallback) {
+      callbacks.delete(draw);
+      if (!callbacks.size && frame !== undefined) {
+        win.cancelAnimationFrame(frame);
+        frame = undefined;
+      }
+    },
+  };
+  frameLoops.set(win, loop);
+  return loop;
+}
+
 /** Drives visible stages only. The optional frame interval is in milliseconds. */
 export function observeMotion(element: HTMLElement, draw: (delta: number, reducedMotion: boolean, now: number) => void,
   frameInterval?: () => number) {
@@ -217,13 +247,13 @@ export function observeMotion(element: HTMLElement, draw: (delta: number, reduce
   const doc = element.ownerDocument;
   const Observer = win.IntersectionObserver;
   const preference = win.matchMedia('(prefers-reduced-motion: reduce)');
-  let frame: number | undefined;
+  const loop = frameLoop(win);
   let last: number | undefined;
+  let running = false;
   let visible = !Observer;
   let reduced = preference.matches;
 
   function tick(now: number) {
-    frame = win!.requestAnimationFrame(tick);
     const interval = Math.max(reduced ? 48 : 0, frameInterval?.() ?? 0);
     // Account for fractional vsync timestamps when an interval spans multiple frames.
     if (last !== undefined && now - last + 0.75 < interval) return;
@@ -233,11 +263,13 @@ export function observeMotion(element: HTMLElement, draw: (delta: number, reduce
   }
 
   function sync() {
-    const running = visible && !doc.hidden;
-    if (running && frame === undefined) frame = win!.requestAnimationFrame(tick);
-    if (!running && frame !== undefined) {
-      win!.cancelAnimationFrame(frame);
-      frame = last = undefined;
+    const active = visible && !doc.hidden;
+    if (active === running) return;
+    running = active;
+    if (running) loop.add(tick);
+    else {
+      loop.remove(tick);
+      last = undefined;
     }
   }
 
@@ -253,7 +285,7 @@ export function observeMotion(element: HTMLElement, draw: (delta: number, reduce
 
   return () => {
     observer?.disconnect();
-    if (frame !== undefined) win.cancelAnimationFrame(frame);
+    loop.remove(tick);
     preference.removeEventListener('change', updatePreference);
     doc.removeEventListener('visibilitychange', sync);
   };

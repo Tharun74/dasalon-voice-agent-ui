@@ -9,6 +9,7 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CodeBlock } from '@/components/code-block';
+import { PresetPoster } from '@/components/live-visual';
 import { DemoAdapter, MicAdapter } from '@/src/adapters';
 import { THEME_PRESETS } from '@/src/theme';
 import { VoiceAgent } from '@/src/VoiceAgent';
@@ -142,13 +143,14 @@ export function ComponentPlayground({ item }: { item: CatalogEntry }) {
         <TabsTrigger value="code" className="gap-1.5 text-xs"><Code2 className="size-3.5" />Code</TabsTrigger>
       </TabsList>
       <TabsContent value="preview" className="min-w-0">
-        <motion.div className={canvasClass} initial={{ opacity: .72 }} animate={{ opacity: 1 }} transition={{ duration: .2 }}>
+        <div className={canvasClass}>
           <div className="absolute top-3.5 left-3.5 z-10 flex items-center gap-1.5 text-[11px] text-zinc-400" role="status">
             <i className="size-1.5 rounded-full bg-[#dca58e]" />{state === 'idle' ? 'Idle' : STATE_LABELS[state]}
           </div>
           <Button type="button" variant="ghost" size="icon" className="absolute top-2.5 right-2.5 z-10 size-8 text-zinc-300 hover:bg-white/10 hover:text-white"
             title="Reload animation" aria-label="Reload animation" onClick={() => setRevision(value => value + 1)}><RotateCcw className="size-4" /></Button>
-          <div className="relative grid min-h-[255px] flex-1 place-items-center sm:min-h-[340px]">
+          <div className="poster-swap relative grid min-h-[255px] flex-1 place-items-center sm:min-h-[340px]">
+            <PresetPoster variant={item.variant} eager />
             <VoiceAgent key={revision} variant={item.variant} adapter={adapter} theme={options.theme}
               size={options.size} intensity={options.intensity} seed={options.seed} colors={options.colors} interactive={options.interactive} />
           </div>
@@ -167,7 +169,7 @@ export function ComponentPlayground({ item }: { item: CatalogEntry }) {
               {mode === 'mic' ? <MicOff className="size-3.5" /> : <Mic className="size-3.5" />}{mode === 'mic' ? 'Mic off' : 'Use mic'}
             </Button>
           </div>
-        </motion.div>
+        </div>
         {mode === 'mic' && (error || state === 'connecting') ? <p role="status" className="mt-2 text-xs text-muted-foreground">{error ?? 'Allow microphone access to visualize your voice.'}</p> : null}
       </TabsContent>
       <TabsContent value="code" className="min-w-0">

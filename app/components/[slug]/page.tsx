@@ -12,7 +12,7 @@ import { InstallPreset } from '@/components/install-preset';
 import { PresetExamples } from '@/components/preset-examples';
 import { CodeBlock } from '@/components/code-block';
 import { TableOfContents } from '@/components/table-of-contents';
-import { documented } from '@/site/catalog';
+import { catalog } from '@/site/catalog';
 import { providerSnippets } from '@/site/snippets';
 
 type Route = { params: Promise<{ slug: string }> };
@@ -34,13 +34,15 @@ const properties = [
   ['className, style', 'string, CSSProperties', '—', 'Styles the outer preset container.'],
 ];
 
+export const dynamicParams = false;
+
 export function generateStaticParams() {
-  return documented.map(item => ({ slug: item.slug }));
+  return catalog.map(item => ({ slug: item.slug }));
 }
 
 export async function generateMetadata({ params }: Route): Promise<Metadata> {
   const { slug } = await params;
-  const item = documented.find(candidate => candidate.slug === slug);
+  const item = catalog.find(candidate => candidate.slug === slug);
   return item ? { title: item.name, description: item.description } : { title: 'Component not found' };
 }
 
@@ -53,11 +55,11 @@ function Section({ id, title, children }: { id: string; title: string; children:
 
 export default async function ComponentPage({ params }: Route) {
   const { slug } = await params;
-  const index = documented.findIndex(item => item.slug === slug);
-  const item = documented[index];
-  if (!item?.docs) notFound();
-  const previous = documented[index - 1];
-  const next = documented[index + 1];
+  const index = catalog.findIndex(item => item.slug === slug);
+  const item = catalog[index];
+  if (!item) notFound();
+  const previous = catalog[index - 1];
+  const next = catalog[index + 1];
   const snippets = providerSnippets(item);
 
   return <div className="site-width grid items-start gap-7 py-8 sm:py-10 lg:grid-cols-[165px_minmax(0,1fr)] xl:grid-cols-[170px_minmax(0,1fr)_137px] xl:gap-8">
@@ -71,7 +73,7 @@ export default async function ComponentPage({ params }: Route) {
         <h1 className="text-[clamp(2.8rem,6vw,4rem)] leading-none font-semibold tracking-[-.057em]">{item.name}</h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">{item.description}</p>
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {[...item.tags, 'Audio-reactive', 'WebGL'].map(tag => <Badge key={tag} variant="outline" className="rounded-md bg-card text-[11px] text-muted-foreground">{tag}</Badge>)}
+          {[...item.tags, 'Audio-reactive', item.variant === 'dock' ? 'Canvas2D' : 'WebGL'].map(tag => <Badge key={tag} variant="outline" className="rounded-md bg-card text-[11px] text-muted-foreground">{tag}</Badge>)}
         </div>
       </header>
       <section id="preview" aria-label="Interactive preview" className="scroll-mt-22"><ComponentPlayground item={item} /></section>
@@ -110,9 +112,10 @@ export default async function ComponentPage({ params }: Route) {
       <Section id="notes" title="Notes">
         <div className="prose-copy space-y-3">
           <p>{item.docs.summary} {item.docs.motion}</p>
-          <p><strong className="text-foreground">Performance.</strong> The renderer loads on the client, pauses outside the viewport and falls back to Canvas2D when WebGL is unavailable.</p>
+          <p><strong className="text-foreground">Performance.</strong> {item.variant === 'dock' ? 'The dock uses Canvas2D and pauses outside the viewport.' : 'The renderer loads on the client, pauses outside the viewport and falls back to Canvas2D when WebGL is unavailable.'}</p>
           <p><strong className="text-foreground">Accessibility.</strong> Use Enter or Space to pulse the visual. Reduced motion slows the animation and reduces movement. Your app should provide spoken-state labels and transcripts.</p>
           <p><strong className="text-foreground">SSR.</strong> Import the component from a client boundary when you create a browser adapter. The initial markup can render on the server.</p>
+          <Link href={`/lab?preset=${item.variant}`} prefetch={false} className="inline-flex items-center gap-1.5 font-medium text-foreground hover:underline">Tune this preset in the Audio Lab <ArrowRight aria-hidden="true" className="size-3.5" /></Link>
         </div>
       </Section>
 
