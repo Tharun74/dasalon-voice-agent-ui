@@ -9,7 +9,7 @@ import { GalleryGrid } from '@/components/gallery-grid';
 import { registryOrigin } from '@/site/catalog';
 
 const features = [
-  { icon: AudioLines, label: 'Live presets', detail: 'Eight distinct shapes and motion systems for listening, thinking and speaking.', marker: <div className="flex h-6 items-center gap-1 text-[var(--rose)]" aria-hidden="true">{[3, 5, 12, 19, 9, 14, 6, 10, 4, 7, 3].map((height, i) => <i key={i} className="w-[2px] rounded-full bg-current" style={{ height }} />)}</div> },
+  { icon: AudioLines, label: 'Live presets', detail: 'Distinct shapes and motion systems for listening, thinking and speaking.', marker: <div className="flex h-6 items-center gap-1 text-[var(--rose)]" aria-hidden="true">{[3, 5, 12, 19, 9, 14, 6, 10, 4, 7, 3].map((height, i) => <i key={i} className="w-[2px] rounded-full bg-current" style={{ height }} />)}</div> },
   { icon: Palette, label: 'Five finishes', detail: 'Use a built-in palette or pass your own highlight, glow and shadow colors.', marker: <div className="flex gap-1.5" aria-hidden="true">{['#e8a39a', '#e5c286', '#aaa7f0', '#76c7ab', '#f0aec8'].map(color => <i key={color} className="size-2.5 rounded-full" style={{ background: color }} />)}</div> },
   { icon: Plug, label: 'Bring your provider', detail: 'One adapter interface for browser audio, demo conversations and your voice SDK.', marker: <span className="font-mono text-[10px] text-muted-foreground">input → preset ← output</span> },
   { icon: Terminal, label: 'Install with shadcn', detail: 'Add source files directly to your project. Use the CLI or copy them manually.' },

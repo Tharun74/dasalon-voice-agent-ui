@@ -20,7 +20,7 @@ const vertex = `${PARAMS}
       cos(p.y * 2.5 + clock * 1.1) - sin(p.z * 3.1 - clock * 0.72),
       cos(p.z * 3.1 - clock * 0.72) - sin(p.x * 2.7 + clock * 0.83),
       cos(p.x * 2.7 + clock * 0.83) - sin(p.y * 2.5 + clock * 1.1));
-    p *= 1.0 - intake * 0.30 + spread * (0.23 + grain.x * 0.30) + pulse * 0.11 - recoil * 0.10;
+    p *= 1.0 - intake * 0.36 + spread * (0.23 + grain.x * 0.30) + pulse * 0.11 + springBack * 0.27;
     p += curl * (0.035 + spread * grain.y * 0.20) * (1.0 - quiet * 0.62);
     p.y *= 1.0 - quiet * 0.25;
     p.y += sin(grain.x * 6.283 + clock * 2.5 + radius * 5.7) * thought * 0.097;
@@ -28,7 +28,7 @@ const vertex = `${PARAMS}
     vec4 view = modelViewMatrix * vec4(p,1.0);
     float twinkle = 0.65 + 0.35 * sin(clock * (0.7 + grain.z * 4.2) + grain.x * 51.0);
     brightness = (0.18 + grain.y * 0.31 + grain.z * grain.z * 0.18) * twinkle * (1.0 - quiet * 0.55);
-    brightness *= 1.28 - 0.22 * radius + release * 0.46 + orbit * 0.21;
+    brightness *= 1.28 - 0.22 * radius + release * 0.46 + orbit * (0.21 + listenRim * 0.65);
     warmth = grain.z;
     orbital = orbit;
     gl_PointSize = (0.9 + pow(grain.y, 5.0) * 2.9 + release * 0.65) * (4.85 / -view.z);

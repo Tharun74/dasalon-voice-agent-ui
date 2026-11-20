@@ -1,4 +1,4 @@
-import type { AudioChannel, FrequencyFrame, SignalSample, VoiceAgentAdapter } from './types.js';
+import type { AgentState, AudioChannel, FrequencyFrame, SignalSample, VoiceAgentAdapter } from './types.js';
 
 export const EMPTY_FREQUENCIES: FrequencyFrame = { bins: new Float32Array(0), sampleRate: 48000 };
 export const EMPTY_SIGNAL: SignalSample = { rms: 0, peak: 0, frequency: EMPTY_FREQUENCIES };
@@ -70,7 +70,6 @@ class SignalEnvelope {
   private fast = 0;
   private slow = 0;
   private cooldown = 0;
-  private fluxPrevious = 0;
 
   constructor(private readonly channel: AudioChannel) {
     this.reference = channel === 'input' ? 0.040 : 0.085;
@@ -85,7 +84,7 @@ class SignalEnvelope {
     f.spectrum.fill(0);
     this.floor = 0.0017;
     this.reference = this.channel === 'input' ? 0.040 : 0.085;
-    this.gateTail = this.previousRms = this.slope = this.fast = this.slow = this.cooldown = this.fluxPrevious = 0;
+    this.gateTail = this.previousRms = this.slope = this.fast = this.slow = this.cooldown = 0;
   }
 
   update(adapter: VoiceAgentAdapter, dt: number, tuning: AudioTuning, silent: boolean) {
@@ -118,14 +117,13 @@ class SignalEnvelope {
     f.peak = follow(f.peak, peakTarget, dt, tuning.attack * 0.65, tuning.release * 0.77);
     f.gain = ratio;
 
-    let sum = 0, centroid = 0, flux = 0;
+    let sum = 0, centroid = 0;
     for (let i = 0; i < f.spectrum.length; i++) {
       const signal = f.gateOpen ? spectralLevel(bins, hzPerBin, LOG_EDGES[i], LOG_EDGES[i + 1]) : 0;
       const value = signal * Math.sqrt(target);
       const power = signal * signal;
       sum += power;
       centroid += power * LOG_EDGES[i];
-      if (i >= 16) flux += value;
       f.spectrum[i] = follow(f.spectrum[i], value, dt, tuning.attack * 1.14, tuning.release);
     }
     for (let i = 0; i < AUDIO_BANDS.length; i++) {
@@ -136,11 +134,10 @@ class SignalEnvelope {
     const brightness = sum > 0.001 ? Math.log2(1 + centroid / sum / 210) / 5.6 : 0;
     f.centroid = smooth(f.centroid, normalizedLevel(brightness), dt, 0.13);
 
-    this.fast = smooth(this.fast, target, dt, 0.018);
-    this.slow = smooth(this.slow, target, dt, 0.075);
-    const normalizedFlux = flux / 32;
-    const edge = (this.fast - this.slow) + Math.min(0.09, Math.max(0, normalizedFlux - this.fluxPrevious) * 0.62);
-    this.fluxPrevious = smooth(this.fluxPrevious, normalizedFlux, dt, 0.058);
+    const body = target * 0.80 + peakTarget * 0.20;
+    this.fast = smooth(this.fast, body, dt, 0.018);
+    this.slow = smooth(this.slow, body, dt, 0.075);
+    const edge = this.fast - this.slow;
     this.cooldown = Math.max(0, this.cooldown - dt);
     if (!this.cooldown && f.gateOpen && target > 0.11 && edge > 0.058 + this.slow * 0.085) {
       f.onsetCount++;
@@ -158,11 +155,10 @@ export class AudioEngine {
   reset() { this.input.reset(); this.output.reset(); }
 
   /** The frame and all spectra are reused. Delta is in seconds. */
-  sample(adapter: VoiceAgentAdapter, delta: number, tuning: AudioTuning = DEFAULT_AUDIO_TUNING): AudioFrame {
+  sample(adapter: VoiceAgentAdapter, delta: number, tuning: AudioTuning = DEFAULT_AUDIO_TUNING, state: AgentState = adapter.state): AudioFrame {
     const dt = deltaSeconds(delta);
     if (!dt) return this.frame;
-    const state = adapter.state;
-    const silent = state === 'idle' || state === 'error' || state === 'connecting';
+    const silent = state === 'error' || state === 'connecting' || (state === 'idle' && adapter.state === 'idle');
     this.input.update(adapter, dt, tuning, silent || state === 'muted');
     this.output.update(adapter, dt, tuning, silent);
     return this.frame;

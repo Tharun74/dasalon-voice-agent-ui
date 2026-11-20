@@ -23,15 +23,10 @@ class ClipAnalysis {
   private readonly imag = new Float32Array(FFT_SIZE);
   private readonly frames = [measurement(), measurement()];
   private readonly positions = [-1, -1];
-  private readonly samples: Float32Array;
+  private readonly channels: Float32Array[];
 
   constructor(buffer: AudioBuffer) {
-    this.samples = new Float32Array(buffer.length);
-    for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
-      const data = buffer.getChannelData(channel);
-      const weight = 1 / buffer.numberOfChannels;
-      for (let i = 0; i < data.length; i++) this.samples[i] += data[i] * weight;
-    }
+    this.channels = Array.from({ length: buffer.numberOfChannels }, (_, channel) => buffer.getChannelData(channel));
   }
 
   read(seconds: number, ahead: boolean) {
@@ -42,17 +37,29 @@ class ClipAnalysis {
     this.positions[page] = center;
 
     let squares = 0, peak = 0;
+    let strongest = -1;
+    let samples = this.channels[0];
     const start = center - FFT_SIZE / 2;
-    for (let i = 0; i < FFT_SIZE; i++) {
-      const value = this.samples[start + i] ?? 0;
-      this.real[REVERSE[i]] = value * HANN[i];
-      this.imag[REVERSE[i]] = 0;
-      if (i >= 256 && i < 768) {
-        squares += value * value;
+    // Measure power before combining channels so stereo phase cannot cancel the motion signal.
+    for (const channel of this.channels) {
+      let power = 0;
+      for (let i = center - FFT_SIZE / 4; i < center + FFT_SIZE / 4; i++) {
+        const value = channel[i] ?? 0;
+        power += value * value;
         peak = Math.max(peak, Math.abs(value));
       }
+      squares += power;
+      if (power > strongest) {
+        strongest = power;
+        samples = channel;
+      }
     }
-    analysis.rms = Math.sqrt(squares / 512);
+    // One FFT on the strongest channel retains syllable detail without extra transforms for stereo.
+    for (let i = 0; i < FFT_SIZE; i++) {
+      this.real[REVERSE[i]] = (samples[start + i] ?? 0) * HANN[i];
+      this.imag[REVERSE[i]] = 0;
+    }
+    analysis.rms = Math.sqrt(squares / (FFT_SIZE / 2 * this.channels.length));
     analysis.peak = peak;
 
     for (let length = 2; length <= FFT_SIZE; length *= 2) {
@@ -214,7 +221,7 @@ export class ClipAdapter extends AdapterStore implements VoiceAgentAdapter {
     let time = this.position();
     if (this.voice && this.context) {
       const stamp = this.context.getOutputTimestamp?.();
-      if (stamp?.contextTime && stamp.performanceTime) {
+      if (stamp?.contextTime !== undefined && stamp.performanceTime !== undefined && stamp.performanceTime > 0) {
         const heardTime = stamp.contextTime + Math.max(0, (performance.now() - stamp.performanceTime) / 1000);
         time = this.offset + Math.max(0, heardTime - this.started) * this.rate;
       }

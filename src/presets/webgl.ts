@@ -136,7 +136,7 @@ export function mountScene(document: Document, module: SceneModule, seed: number
   if (!shared) return undefined;
   let built: BuiltScene;
   try {
-    built = module.createScene(seed);
+    built = module.createScene(seed, shared.renderer);
   } catch (error) {
     release(document, shared);
     throw error;
@@ -165,7 +165,8 @@ export function mountScene(document: Document, module: SceneModule, seed: number
         camera.updateProjectionMatrix();
       }
       subject.position.set(inputs.motion.x * 0.07, -inputs.motion.y * 0.06, 0);
-      built.update(inputs);
+      subject.scale.setScalar(1 + inputs.motion.breath * inputs.motion.weights.idle * .012);
+      built.update(inputs, renderer);
       renderer.render(scene, camera);
     },
   };

@@ -13,6 +13,8 @@ export function uniformsFor(seed: number) {
     spectralSheen: { value: 0 },
     springBack: { value: 0 },
     beatAges: { value: new Vector3(9, 9, 9) },
+    beatStrengths: { value: new Vector3() },
+    listenRim: { value: 0 },
     seedKey: { value: initial * 0.01 },
     intake: { value: 0 },
     release: { value: 0 },
@@ -32,8 +34,8 @@ export type StageUniforms = ReturnType<typeof uniformsFor>;
 
 export const PARAMS = `
 uniform float clock, seedKey, intake, release, quiet, thought, connect, recoil, pulse;
-uniform float motionPhase, breath, bodyWeight, sparkle, spectralSheen, springBack;
-uniform vec3 beatAges;
+uniform float motionPhase, breath, bodyWeight, sparkle, spectralSheen, springBack, listenRim;
+uniform vec3 beatAges, beatStrengths;
 uniform vec2 pointer;
 uniform vec3 glow, foil, shade;
 `;
@@ -50,6 +52,8 @@ export function feed(uniforms: StageUniforms, inputs: SceneInputs) {
   uniforms.spectralSheen.value = motion.features.sheen * detail;
   uniforms.springBack.value = motion.features.recoil * detail;
   uniforms.beatAges.value.set(motion.beats[0], motion.beats[1], motion.beats[2]);
+  uniforms.beatStrengths.value.set(motion.beatStrengths[0], motion.beatStrengths[1], motion.beatStrengths[2]);
+  uniforms.listenRim.value = motion.features.rim * (motion.reducedMotion ? .58 : 1);
   uniforms.intake.value = inward;
   uniforms.release.value = outward;
   uniforms.quiet.value = quiet;

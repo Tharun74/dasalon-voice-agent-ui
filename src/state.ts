@@ -15,6 +15,8 @@ export const STATE_LABELS: Readonly<Record<AgentState, string>> = {
 
 export type StateWeights = Readonly<Record<AgentState, number>>;
 
+export const HESITATION_SECONDS = 0.60;
+
 export class StateMixer {
   private readonly from = Object.fromEntries(AGENT_STATES.map(state => [state, 0])) as Record<AgentState, number>;
   private readonly weights = { ...this.from };
@@ -31,6 +33,8 @@ export class StateMixer {
     this.weights[initial] = 1;
   }
 
+  get state() { return this.target; }
+
   /** Returns a reused view. Retargets from the current blend, including mid-transition. */
   sample(target: AgentState, delta: number): StateWeights {
     const dt = deltaSeconds(delta);
@@ -41,7 +45,9 @@ export class StateMixer {
     }
     this.dwell += dt;
     const urgent = target === 'interrupted' || target === 'error' || target === 'muted';
-    if (this.target !== target && (urgent || (this.candidateAge >= 0.058 && this.dwell >= 0.115))) {
+    const releasingTurn = target === 'idle' && (this.target === 'listening' || this.target === 'speaking');
+    const sustained = this.candidateAge >= (releasingTurn ? HESITATION_SECONDS : 0.075);
+    if (this.target !== target && (urgent || (sustained && this.dwell >= 0.145))) {
       Object.assign(this.from, this.weights);
       this.target = target;
       this.elapsed = 0;

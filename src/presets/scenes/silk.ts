@@ -1,4 +1,4 @@
-import { BufferAttribute, BufferGeometry, DoubleSide, Group, Mesh, ShaderMaterial } from 'three';
+import { BufferAttribute, BufferGeometry, DoubleSide, Group, Mesh, PlaneGeometry, ShaderMaterial } from 'three';
 import { randomFor, tilt } from '../runtime.js';
 import { aura, feed, PARAMS, uniformsFor } from './shading.js';
 import type { BuiltScene } from '../runtime.js';
@@ -54,7 +54,8 @@ const vertex = `
     float taper = pow(max(0.001, sin(u * 3.14159)), 0.42);
     float crease = sin(u * 9.2 + lane * 1.7 + clock * 0.39);
     float delayed = u + lane * 0.043;
-    float packets = ripple(delayed, beatAges.x) + ripple(delayed, beatAges.y) + ripple(delayed, beatAges.z);
+    float packets = ripple(delayed, beatAges.x) * beatStrengths.x + ripple(delayed, beatAges.y) * beatStrengths.y
+      + ripple(delayed, beatAges.z) * beatStrengths.z;
     packets /= 1.0 + 0.65 * abs(packets);
     float rootAnchor = smoothstep(0.04, 0.33, u);
     float wave = (packets * release * 0.47 + sin(u * 10.0 - motionPhase * 4.8 + lane * 0.48) * bodyWeight * 0.53)
@@ -77,6 +78,7 @@ const vertex = `
 
 const fragment = `
   ${PARAMS}
+  uniform float layerOpacity;
   varying float u, lane, edge, fall, gloss;
   void main() {
     float streak = pow(gloss, 5.0);
@@ -85,8 +87,12 @@ const fragment = `
     vec3 copper = mix(shade * 0.38 + vec3(0.10,0.037,0.019), glow, 0.23 + 0.35 * dye);
     vec3 color = copper * (0.32 + secondary * 0.54 + spectralSheen * 0.11) + foil * streak * (0.43 + sparkle * 0.25);
     color += foil * intake * pow(1.0 - abs(lane), 3.0) * 0.13;
+    color += foil * listenRim * smoothstep(0.79, 1.0, abs(lane)) * 0.19;
     color += (1.0 - abs(edge)) * vec3(0.075,0.028,0.012) + foil * 0.075;
-    gl_FragColor = vec4(color * (1.0 - quiet * 0.58), fall * (0.55 + 0.45 * dye));
+    float feather = clamp(fwidth(edge), 0.18, 1.0);
+    float coverage = 1.0 - smoothstep(1.0 - feather, 1.0, abs(edge));
+    float opacity = fall * (0.55 + 0.45 * dye) * coverage * layerOpacity;
+    gl_FragColor = vec4(color * (1.0 - quiet * 0.58), opacity);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }
@@ -95,10 +101,19 @@ const fragment = `
 export function createScene(seed: number): BuiltScene {
   const uniforms = uniformsFor(seed);
   const object = new Group();
-  const silk = new Mesh(ribbons(seed), new ShaderMaterial({
-    uniforms, vertexShader: vertex, fragmentShader: fragment, side: DoubleSide, transparent: true,
-  }));
-  silk.frustumCulled = false;
+  const silk = new Group();
+  const backing = new PlaneGeometry(1, 2, 40, 68).translate(0.5, 0, 0);
+  backing.setAttribute('thread', new BufferAttribute(new Float32Array(backing.attributes.position.count), 1));
+  // The matching satin surface keeps subpixel gaps between strands from flickering against the background.
+  for (const [geometry, layerOpacity, order] of [[backing, 0.91, 0], [ribbons(seed), 0.40, 1]] as const) {
+    const surface = new Mesh(geometry, new ShaderMaterial({
+      uniforms: { ...uniforms, layerOpacity: { value: layerOpacity } }, vertexShader: vertex, fragmentShader: fragment,
+      side: DoubleSide, transparent: true, depthWrite: false,
+    }));
+    surface.frustumCulled = false;
+    surface.renderOrder = order;
+    silk.add(surface);
+  }
   object.add(aura(uniforms, 4.7, 3, 0.49), silk);
   return { object, update(inputs) {
     feed(uniforms, inputs);

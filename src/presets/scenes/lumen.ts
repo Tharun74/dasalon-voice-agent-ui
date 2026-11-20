@@ -11,7 +11,8 @@ const pressure = `
   }
   float surfacePressure(vec3 position) {
     float travel = (0.54 * position.y + 0.22 * position.x + 0.65);
-    return pressurePacket(travel, beatAges.x) + pressurePacket(travel, beatAges.y) + pressurePacket(travel, beatAges.z);
+    return pressurePacket(travel, beatAges.x) * beatStrengths.x + pressurePacket(travel, beatAges.y) * beatStrengths.y
+      + pressurePacket(travel, beatAges.z) * beatStrengths.z;
   }
 `;
 
@@ -67,7 +68,7 @@ const fragment = `
     vec3 tint = mix(shade * 0.1 + vec3(0.025,0.011,0.045), shade * 0.71 + spectral * 0.49, liquid);
     tint += filament * (glow * 0.48 + spectral * 1.45) * (0.38 + angle * 0.53);
     tint += rim * (spectral + glow * 0.28) * 1.36;
-    tint += critical * foil * 0.38;
+    tint += critical * foil * (0.38 + listenRim * 0.25);
     vec3 key = normalize(vec3(-0.52 + pointer.x * 0.14, 0.64 - pointer.y * 0.1, 0.65));
     float softbox = pow(max(0.0, dot(normal, key)), 26.0);
     float fill = pow(max(0.0, dot(normal, normalize(vec3(0.74,-0.53,0.51)))), 20.0);

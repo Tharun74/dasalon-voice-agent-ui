@@ -15,3 +15,7 @@ export { PrismHalo } from './presets/prism.js';
 export { Stardust } from './presets/stardust.js';
 export { DockPill } from './presets/dock.js';
 export { Contour } from './presets/contour.js';
+export { Mercury } from './presets/mercury.js';
+export { AuroraVeil } from './presets/aurora-veil.js';
+export { InkInWater } from './presets/ink-in-water.js';
+export { SilkVeil } from './presets/silk-veil.js';

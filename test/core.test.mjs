@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
-import { AudioEngine, DemoAdapter, MicAdapter, StateMixer, AGENT_STATES, DampedSpring, MotionEngine, motionTuning, observeMotion } from '../dist/index.js';
+import { AudioEngine, DemoAdapter, DEMO_SCENARIOS, IDLE_RHYTHMS, MicAdapter, StateMixer, AGENT_STATES, DampedSpring, MotionEngine, motionTuning, observeMotion } from '../dist/index.js';
 import { PRESETS, PRESET_NAMES, VoiceAgent } from '@dasalon/voice-agent-ui';
 
 test('a new state retargets an in-flight blend without a discontinuity', () => {
@@ -89,6 +89,99 @@ test('simulated phrase lookahead has exact future levels and produces distinct s
   const levels = engine.sample(demo, 0);
   assert.ok(levels.output.onsetCount >= 7 && levels.output.onsetCount <= 23, levels.output.onsetCount);
   assert.equal(levels.input.rawRms, 0);
+});
+
+test('the listening rim leads contraction and the opposing audio channel cannot drive or tint a turn', () => {
+  const model = (state, input, output) => {
+    const adapter = { state: 'idle', inputLevel: () => input, outputLevel: () => output,
+      frequencyData: () => ({ bins: new Float32Array(256).fill(.7), sampleRate: 24000 }) };
+    const engine = new MotionEngine(adapter, 'silk');
+    adapter.state = state;
+    return () => engine.sample(adapter, .01, false, motionTuning('silk'));
+  };
+  const listen = model('listening', .09, 0), noisyListen = model('listening', .09, .94);
+  const speak = model('speaking', 0, .09), noisySpeak = model('speaking', .94, .09);
+  for (let i = 0; i < 120; i++) {
+    const left = listen(), right = speak();
+    assert.deepEqual(left.features, noisyListen().features);
+    assert.deepEqual(right.features, noisySpeak().features);
+    if (i === 14) { assert.ok(left.features.rim > .70); assert.equal(left.features.inward, 0); }
+    if (i === 119) {
+      assert.ok(left.features.inward > .4 && right.features.outward > .5);
+      assert.equal(left.features.outward, 0); assert.equal(right.features.inward, 0);
+    }
+  }
+});
+
+test('hesitation holds the turn at low tension and a sustained release returns to stable idle', () => {
+  const demo = new DemoAdapter({ manual: true });
+  const engine = new MotionEngine(demo, 'lumen');
+  const advance = () => { demo.advance(.01); return engine.sample(demo, .01, false); };
+  demo.playScenario('hesitation');
+  for (let i = 0; i < 193; i++) {
+    const frame = advance();
+    if (demo.scenarioCue === 1) {
+      assert.equal(demo.state, 'idle');
+      assert.equal(frame.state, 'speaking');
+      if (demo.scenarioPosition > 1.81) assert.ok(frame.features.anticipation > .08 && frame.features.outward < .24);
+    }
+  }
+  assert.equal(engine.peek().state, 'speaking');
+  demo.playScenario('recovery');
+  let sawNoise = false;
+  for (let i = 0; i < 490; i++) {
+    const frame = advance();
+    if (demo.scenarioCue === 3) {
+      sawNoise = true;
+      assert.equal(frame.state, 'idle');
+      assert.ok(frame.audio.input.rawRms > .01);
+      assert.equal(frame.features.inward, 0);
+    }
+  }
+  assert.ok(sawNoise);
+  assert.equal(engine.peek().state, 'idle');
+  assert.ok(engine.peek().weights.idle > .999);
+});
+
+test('barge-in recoils within 120 ms and then refocuses without a second impulse', () => {
+  const demo = new DemoAdapter({ manual: true });
+  const engine = new MotionEngine(demo, 'lumen');
+  demo.preview('speaking');
+  for (let i = 0; i < 90; i++) engine.sample(demo, .01, false);
+  demo.preview('interrupted');
+  let peak = 0;
+  for (let i = 0; i < 11; i++) peak = Math.min(peak, engine.sample(demo, .01, false).features.recoil);
+  assert.ok(peak < -.2, peak);
+  for (let i = 0; i < 60; i++) engine.sample(demo, .01, false);
+  assert.equal(engine.peek().state, 'listening');
+  assert.ok(engine.peek().features.inward > .04);
+  assert.ok(Math.abs(engine.peek().features.recoil) < .008);
+});
+
+test('all marked scenarios run on the manual clock and every preset has a distinct idle rhythm', () => {
+  assert.equal(Object.keys(DEMO_SCENARIOS).length, 7);
+  const demo = new DemoAdapter({ manual: true });
+  for (const [id, scenario] of Object.entries(DEMO_SCENARIOS)) {
+    demo.playScenario(id);
+    const length = scenario.cues.reduce((total, cue) => total + cue.seconds, 0);
+    const observed = new Set();
+    let overlap = false;
+    let inputPeak = 0;
+    for (let tick = 0; tick <= Math.ceil(length * 100) + 2; tick++) {
+      observed.add(demo.scenarioCue);
+      inputPeak = Math.max(inputPeak, demo.inputLevel());
+      if (demo.inputLevel() > .01 && demo.outputLevel() > .01) overlap = true;
+      demo.advance(.01);
+    }
+    assert.equal(observed.size, scenario.cues.length);
+    assert.equal(demo.state, 'idle');
+    assert.equal(demo.scenarioPosition, length);
+    if (id === 'overlap') assert.ok(overlap);
+    if (id === 'quietMic') assert.ok(inputPeak > .006 && inputPeak < .025);
+    if (id === 'loudMic') assert.ok(inputPeak > .3);
+  }
+  assert.equal(new Set(PRESET_NAMES.map(name => IDLE_RHYTHMS[name][0])).size, PRESET_NAMES.length);
+  assert.equal(new Set(PRESET_NAMES.map(name => IDLE_RHYTHMS[name][1])).size, PRESET_NAMES.length);
 });
 
 test('physical overshoot is stable across refresh rates and motion accumulates phase monotonically', () => {

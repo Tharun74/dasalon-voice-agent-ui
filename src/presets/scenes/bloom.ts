@@ -63,7 +63,7 @@ const petalFragment = `${PARAMS}
     vec3 finish = glow * (0.70 + layer * 0.13) + foil * 0.19;
     vec3 color = mix(root, finish, tip * 0.82 + edge * 0.15) * diffuse;
     color += foil * (rim * 0.18 + porous * 0.25 + veins * tip * 0.055 + pow(coord.y, 8.0) * 0.22);
-    color += glow * release * tip * 0.29;
+    color += glow * release * tip * 0.29 + foil * listenRim * edge * tip * .22;
     gl_FragColor = vec4(color * (1.0 - quiet * 0.59), 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
@@ -118,9 +118,10 @@ export function createScene(seed: number): BuiltScene {
       const turn = Math.sin(motion.time * 2.25 + angle * 2 + layer * 1.7);
       hinge.rotation.set(0.02 + layer * 0.20 + inward * 0.54 - outward * (0.43 + ripple * 0.17)
         + motion.weights.thinking * turn * 0.11 + motion.weights.connecting * turn * 0.17
-        + motion.weights.interrupted * 0.24 + quiet * 0.31 - motion.pulse * 0.17
+        - motion.features.recoil * (0.55 + layer * .08) + quiet * 0.31 - motion.pulse * 0.17
         + Math.sin(motion.time * 1.35 + angle + variation) * 0.05, (variation - 0.5) * 0.16, angle);
     }
+    flower.scale.setScalar(1 - inward * .13 + outward * .16 + motion.features.recoil * .14);
     tilt(flower, motion, -0.23 + Math.sin(motion.time * 0.62) * 0.10, 0.18, motion.time * 0.10);
   } };
 }

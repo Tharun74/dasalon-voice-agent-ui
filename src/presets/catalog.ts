@@ -12,6 +12,10 @@ export const PRESETS = {
   stardust: { name: 'Stardust', component: 'Stardust', description: 'A cloud of fine powder gathers and breaks into eddies.', accent: '#eac2fb' },
   dock: { name: 'Dock Pill', component: 'DockPill', description: 'A pocket-size concierge with flowing light under glass.', accent: '#efad99' },
   contour: { name: 'Contour', component: 'Contour', description: 'Polished metal folds through a twisting sculptural knot.', accent: '#e7ad9e' },
+  "mercury": { name: "Mercury", component: "Mercury", description: "Liquid chrome pulls into a single mass, then sheds droplets on syllables.", accent: "#b4bfd8" },
+  "aurora-veil": { name: "Aurora Veil", component: "AuroraVeil", description: "Layered northern lights fold inward and flare in waves.", accent: "#89f4ca" },
+  "ink-in-water": { name: "Ink in Water", component: "InkInWater", description: "Two colors of ink diffuse and curl in a clear water column.", accent: "#62c6c4" },
+  "silk-veil": { name: "Silk Veil", component: "SilkVeil", description: "A single satin sheet drapes, billows and catches anisotropic light.", accent: "#d282b2" },
 } as const;
 
 export type PresetName = keyof typeof PRESETS;

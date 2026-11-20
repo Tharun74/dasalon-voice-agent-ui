@@ -63,6 +63,26 @@ export const catalog: ComponentConfig[] = [
     description: 'Polished metal rails that fold through a sculptural knot.',
     docs: { summary: 'Intertwined rails orbit through a single knot.', motion: 'Listening tightens the rails. Speaking pushes them apart and rolls light along the edges.', finishes: ['champagne', 'blush-pastel'] },
   },
+  {
+    variant: "mercury", slug: "mercury", name: "Mercury", exportName: "Mercury", tags: ["3D"],
+    description: "Liquid chrome pulls into a single mass, then sheds droplets on syllables.",
+    docs: { summary: "Raymarched metaballs reflect a procedural studio. Surface tension frees and reabsorbs droplets.", motion: "Listening draws the mass together. Speaking pushes the shoulder outward and pinches off droplets.", finishes: ["midnight-noir", "champagne"] },
+  },
+  {
+    variant: "aurora-veil", slug: "aurora-veil", name: "Aurora Veil", exportName: "AuroraVeil", tags: ["3D"],
+    description: "Layered northern lights fold inward and flare in waves.",
+    docs: { summary: "Three folded emission volumes are sampled front to back to give each luminous curtain its own depth.", motion: "Listening draws the curtains together. Speaking sweeps a flare down the layered light.", finishes: ["emerald-spa", "blush-pastel"] },
+  },
+  {
+    variant: "ink-in-water", slug: "ink-in-water", name: "Ink in Water", exportName: "InkInWater", tags: ["3D"],
+    description: "Two colors of ink diffuse and curl in a clear water column.",
+    docs: { summary: "A WebGL2 stable-fluids solver advects dye, enforces near-incompressibility with a pressure projection, and curls the plume under the pointer.", motion: "Listening draws the dye toward the nozzle. Speaking injects dye and velocity into expanding eddies. Move the pointer through the water to stir it.", finishes: ["emerald-spa", "midnight-noir"] },
+  },
+  {
+    variant: "silk-veil", slug: "silk-veil", name: "Silk Veil", exportName: "SilkVeil", tags: ["3D"],
+    description: "A single satin sheet drapes, billows and catches anisotropic light.",
+    docs: { summary: "A pinned satin sheet is solved on floating-point textures with Verlet integration and structural, shear and bending constraints. The pointer supplies wind.", motion: "Listening gathers the hanging sheet. Speaking sweeps wind toward the open edge. Move the pointer to billow the cloth.", finishes: ["champagne", "midnight-noir"] },
+  },
 ];
 
 export type CatalogEntry = (typeof catalog)[number];

@@ -8,7 +8,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: { default: 'VoiceKit — Voice interface components for React', template: '%s · VoiceKit' },
-  description: 'Open-source, audio-reactive voice interface presets for React. Preview eight visuals and install their source with shadcn.',
+  description: 'Open-source, audio-reactive voice interface presets for React. Preview the visuals and install their source with shadcn.',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

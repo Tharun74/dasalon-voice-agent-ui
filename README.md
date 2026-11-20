@@ -1,6 +1,6 @@
 # VoiceKit
 
-Eight interactive voice-agent presets for React. The Next.js site includes a gallery, component documentation, and a Maison Serein salon example.
+Twelve interactive voice-agent presets for React. The Next.js site includes a gallery, component documentation, and a Maison Serein salon example.
 
 ## Run locally
 
@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Open [localhost:3000](http://localhost:3000). All eight presets have component pages with live audio controls and a props playground. The salon example lives at `/examples/salon-landing`.
+Open [localhost:3000](http://localhost:3000). Each preset has a component page with live audio controls and a props playground. The salon example lives at `/examples/salon-landing`.
 
 ## Audio Lab
 

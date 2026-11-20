@@ -29,7 +29,7 @@ const glass = `${PARAMS}
     surface += foil * (window * 0.44 + rail * 0.22 + side) * (0.81 - quiet * 0.53);
     surface += mix(glow, foil, 0.44) * (ripple + touch) * 0.13;
     float twirl = pow(max(0.0, cos(atan(p.y,p.x) - clock * 2.45)), 20.0);
-    surface += foil * edge * (0.18 + twirl * (thought + connect) * 0.53);
+    surface += foil * edge * (0.18 + listenRim * 0.16 + twirl * (thought + connect) * 0.53);
     surface *= 1.0 - quiet * 0.54;
     gl_FragColor = vec4(surface, 1.0);
     #include <tonemapping_fragment>
@@ -87,11 +87,12 @@ export function createScene(seed: number): BuiltScene {
   return { object, update(inputs) {
     feed(uniforms, inputs);
     const { motion, palette } = inputs;
-    const { outward, quiet } = energy(inputs);
-    tilt(mirror, motion, 0.12 + Math.sin(motion.time * 0.48) * 0.11, -0.22 + motion.weights.interrupted * 0.27, -0.09);
+    const { inward, outward, quiet } = energy(inputs);
+    mirror.scale.setScalar(1 - inward * .16 + outward * .12 + motion.features.recoil * .23);
+    tilt(mirror, motion, 0.12 + Math.sin(motion.time * 0.48) * 0.11, -0.22 - motion.features.recoil * .56, -0.09);
     warmth.set(palette.glow).lerp(brass, 0.58);
     gold.color.lerp(warmth, motion.delta ? smooth(0, 1, motion.delta, 0.16) : 1);
-    gold.emissiveIntensity = 0.25 + outward * 0.65 - quiet * 0.22;
+    gold.emissiveIntensity = 0.25 + outward * 0.65 + uniforms.listenRim.value * .48 - quiet * 0.22;
     updateColor(dark.color, palette.shadow, 0.09, motion.delta);
   } };
 }

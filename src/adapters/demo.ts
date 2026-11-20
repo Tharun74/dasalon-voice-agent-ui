@@ -14,6 +14,69 @@ const SEQUENCE = [
   ['muted', 1.35, [visitor, concierge, interjection, treatment]], ['error', 1.5, [visitor, concierge, interjection, treatment]],
 ] as const satisfies ReadonlyArray<readonly [AgentState, number, readonly TranscriptEntry[]]>;
 
+interface DemoCue {
+  readonly seconds: number;
+  readonly label: string;
+  readonly state: AgentState;
+  readonly input?: number;
+  readonly inputAt?: number;
+  readonly output?: number;
+}
+
+interface DemoScenario {
+  readonly label: string;
+  readonly cues: readonly DemoCue[];
+}
+
+export const DEMO_SCENARIOS = {
+  steady: { label: 'Steady speech', cues: [
+    { seconds: .4, state: 'idle', label: 'Idle' },
+    { seconds: 2.2, state: 'listening', input: 1, label: 'User phrase' },
+    { seconds: .45, state: 'thinking', label: 'Turn gap' },
+    { seconds: 2.8, state: 'speaking', output: 1, label: 'Agent reply' },
+    { seconds: 1.1, state: 'idle', label: 'Release' },
+  ] },
+  hesitation: { label: 'Mid-sentence hesitation', cues: [
+    { seconds: 1.45, state: 'speaking', output: 1, label: 'Agent starts' },
+    { seconds: .46, state: 'idle', label: '460 ms hesitation' },
+    { seconds: 2.2, state: 'speaking', output: 1, label: 'Same turn resumes' },
+    { seconds: 1.15, state: 'idle', label: 'Turn ends' },
+  ] },
+  bargeIn: { label: 'User interruption (barge-in)', cues: [
+    { seconds: 1.6, state: 'speaking', output: 1, label: 'Agent reply' },
+    { seconds: .17, state: 'interrupted', input: .9, output: .45, label: 'User cuts in' },
+    { seconds: 2.2, state: 'listening', input: 1.1, label: 'Re-focus on user' },
+    { seconds: 1.1, state: 'idle', label: 'User finishes' },
+  ] },
+  overlap: { label: 'Overlapping speech', cues: [
+    { seconds: 1.1, state: 'speaking', output: .85, label: 'Agent reply' },
+    { seconds: 1.2, state: 'speaking', input: 1.4, output: .85, label: 'Both channels active' },
+    { seconds: 1, state: 'speaking', output: .85, label: 'Agent continues' },
+    { seconds: .42, state: 'thinking', label: 'Turn gap' },
+    { seconds: 1.9, state: 'listening', input: 1, label: 'User takes the turn' },
+    { seconds: 1.1, state: 'idle', label: 'Release' },
+  ] },
+  quietMic: { label: 'Quiet-mic input', cues: [
+    { seconds: .5, state: 'idle', label: 'Idle' },
+    { seconds: 3.25, state: 'listening', input: .13, label: 'User · 13% gain' },
+    { seconds: 1.2, state: 'idle', label: 'Release' },
+  ] },
+  loudMic: { label: 'Loud-mic input', cues: [
+    { seconds: .5, state: 'idle', label: 'Idle' },
+    { seconds: 3.25, state: 'listening', input: 3.8, label: 'User · 380% gain' },
+    { seconds: 1.2, state: 'idle', label: 'Release' },
+  ] },
+  recovery: { label: 'Recovery to idle', cues: [
+    { seconds: 2.2, state: 'speaking', output: 1, label: 'Agent phrase' },
+    { seconds: .6, state: 'idle', label: 'Anticipation hold' },
+    { seconds: .55, state: 'idle', label: 'Idle blend' },
+    { seconds: .045, state: 'listening', input: 3, inputAt: .16, label: '45 ms noise burst' },
+    { seconds: 1.35, state: 'idle', label: 'Idle stays stable' },
+  ] },
+} as const satisfies Record<string, DemoScenario>;
+
+export type DemoScenarioId = keyof typeof DEMO_SCENARIOS;
+
 interface Syllable {
   start: number;
   length: number;
@@ -83,7 +146,7 @@ function populate(signal: ReturnType<typeof buffer>, seconds: number, input: boo
   const vowel = Math.max(0, 1 - consonant);
   const phraseShape = .83 + .17 * Math.sin(seconds * 2.26 + (input ? 1.3 : 0));
   const r = beat.stress * attack * tail ** .8 * phraseShape * volume;
-  reading.rms = r * (input ? .20 : .30);
+  reading.rms = Math.min(1, r * (input ? .20 : .30));
   reading.peak = Math.min(1, reading.rms * (beat.breath ? 1.4 : 2.05 + consonant * .4));
   const pitch = beat.pitch - beat.pitchFall * p + 3.2 * Math.sin(p * Math.PI);
   const form1 = beat.f1 * (.91 + p * .21);
@@ -111,6 +174,10 @@ export class DemoAdapter extends AdapterStore implements VoiceAgentAdapter {
   private remaining = Infinity;
   private scene: AgentState = 'idle';
   private muted = false;
+  private scenario?: DemoScenario;
+  private scenarioDuration = 0;
+  private scenarioStart = 0;
+  private activeCue = 0;
 
   constructor(private readonly options: { manual?: boolean } = {}) { super(); }
 
@@ -138,6 +205,19 @@ export class DemoAdapter extends AdapterStore implements VoiceAgentAdapter {
     this.change(state, state === 'speaking' ? [visitor, concierge] : state === 'thinking' ? [visitor] : []);
   }
 
+  playScenario(id: DemoScenarioId) {
+    this.cancelSequence();
+    this.muted = false;
+    this.scenario = DEMO_SCENARIOS[id];
+    this.scenarioDuration = this.scenario.cues.reduce((duration, cue) => duration + cue.seconds, 0);
+    this.scenarioStart = this.now();
+    this.activeCue = -1;
+    this.play(this.generation);
+  }
+
+  get scenarioPosition() { return this.scenario ? Math.min(this.scenarioDuration, this.now() - this.scenarioStart) : 0; }
+  get scenarioCue() { return this.scenario ? Math.min(this.activeCue, this.scenario.cues.length - 1) : -1; }
+
   /** Advances manually clocked demos. The default demo uses a monotonic wall clock. */
   advance(seconds: number) {
     if (!this.options.manual || !Number.isFinite(seconds) || seconds <= 0) return;
@@ -153,16 +233,30 @@ export class DemoAdapter extends AdapterStore implements VoiceAgentAdapter {
 
   readSignal(channel: AudioChannel, ahead = 0): SignalSample {
     const input = channel === 'input';
+    const cue = this.scenario?.cues[this.activeCue];
+    if (this.scenario) {
+      const gain = input ? cue?.input : cue?.output;
+      const lead = Math.max(0, Math.min(.08, ahead));
+      if (!cue || !gain || (input && this.muted) || this.now() - this.epoch + lead >= cue.seconds) return EMPTY_SIGNAL;
+      // Reuse the same phrase clock across overlapping turns and artificial gaps.
+      const clock = this.scenarioPosition + lead;
+      const seconds = input ? cue.inputAt ?? clock : clock;
+      return this.signalFor(channel, ahead, seconds, gain);
+    }
     const interrupted = this.scene === 'interrupted';
     if (input ? this.muted || (this.scene !== 'listening' && !interrupted) : this.scene !== 'speaking' && !interrupted) return EMPTY_SIGNAL;
     const elapsed = this.now() - this.epoch + Math.max(0, Math.min(.08, ahead));
     if (interrupted && (input ? elapsed < .055 : elapsed > .105)) return EMPTY_SIGNAL;
+    const sceneTime = interrupted ? input ? elapsed + .15 : elapsed + 1.39 : Math.max(0, elapsed);
+    return this.signalFor(channel, ahead, sceneTime, interrupted && !input ? Math.max(0, 1 - elapsed / .105) : 1);
+  }
+
+  private signalFor(channel: AudioChannel, ahead: number, seconds: number, gain: number) {
     const buffer = this.frames[channel][ahead > 0 ? 1 : 0];
-    const time = Math.floor(elapsed * 150) / 150;
+    const time = Math.floor(seconds * 150) / 150;
     if (time !== buffer.time) {
       buffer.time = time;
-      const sceneTime = interrupted ? input ? time + .15 : time + 1.39 : Math.max(0, time);
-      populate(buffer, sceneTime, input, interrupted && !input ? Math.max(0, 1 - elapsed / .105) : 1);
+      populate(buffer, time, channel === 'input', gain);
     }
     return buffer.reading;
   }
@@ -175,18 +269,34 @@ export class DemoAdapter extends AdapterStore implements VoiceAgentAdapter {
 
   private cancelSequence() {
     this.generation++;
+    this.scenario = undefined;
     this.remaining = Infinity;
     clearTimeout(this.timer);
     this.timer = undefined;
   }
 
   private play(generation: number) {
+    if (this.scenario) {
+      const cue = this.scenario.cues[++this.activeCue];
+      if (!cue) {
+        this.remaining = Infinity;
+        this.change('idle', []);
+        return;
+      }
+      this.change(cue.state, cue.state === 'speaking' ? [visitor, concierge] : []);
+      if (generation === this.generation) this.schedule(cue.seconds, generation);
+      return;
+    }
     const [state, duration, transcript] = SEQUENCE[this.sequenceIndex];
     this.change(state, transcript);
     if (generation !== this.generation) return;
     this.sequenceIndex = (this.sequenceIndex + 1) % SEQUENCE.length;
-    if (this.options.manual) this.remaining = duration;
-    else this.timer = setTimeout(() => this.play(generation), duration * 1000);
+    this.schedule(duration, generation);
+  }
+
+  private schedule(seconds: number, generation: number) {
+    if (this.options.manual) this.remaining = seconds;
+    else this.timer = setTimeout(() => this.play(generation), seconds * 1000);
   }
 
   private change(state: AgentState, transcript: readonly TranscriptEntry[]) {

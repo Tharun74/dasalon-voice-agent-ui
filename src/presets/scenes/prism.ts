@@ -44,18 +44,19 @@ export function createScene(seed: number): BuiltScene {
       const angle = i * Math.PI * 2 / count;
       const current = 0.5 + 0.5 * Math.sin(angle * 2 - t * 3.8);
       const sequencing = Math.pow(0.5 + 0.5 * Math.cos(angle - t * 2.8), 7);
-      const voice = spectrum[i] * motion.weights.speaking * inputs.intensity;
-      const radius = 0.94 + outward * 0.16 - inward * 0.12 + motion.pulse * 0.12;
+      const voice = spectrum[i] * outward;
+      const radius = 0.94 + outward * 0.25 - inward * 0.22 + motion.features.recoil * .24 + motion.pulse * 0.12;
       holder.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius, Math.sin(angle * 4) * 0.09 + current * outward * 0.20);
       holder.rotation.set(inward * 0.65 + current * (0.30 + outward * 0.55), angle * 2 + t * 0.23, angle - Math.PI / 2);
       holder.scale.set(0.54, Math.max(0.19, lengths[i] - inward * 0.20 + outward * 0.30 + voice * 0.73
         + sequencing * (motion.weights.thinking + motion.weights.connecting) * 0.23 - quiet * 0.23
-        - motion.weights.interrupted * 0.14), 0.61);
+        + motion.features.recoil * .25), 0.61);
       holder.updateMatrix();
       shards.setMatrixAt(i, holder.matrix);
     }
     shards.instanceMatrix.needsUpdate = true;
     crystal.emissiveIntensity = 0.16 + outward * 0.61 - quiet * 0.17;
+    backing.emissiveIntensity = .20 + uniforms.listenRim.value * .55;
     updateColor(crystal.color, palette.highlight, 0.11, motion.delta);
     updateColor(crystal.emissive, palette.shadow, 0.12, motion.delta);
     tilt(halo, motion, -0.68 + Math.sin(t * 0.77) * 0.11, 0.26 + Math.sin(t * 0.41) * 0.13, t * 0.14);

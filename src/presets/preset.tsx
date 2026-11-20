@@ -52,7 +52,7 @@ function PresetSurface({ variant, load, ...props }: PresetProps & { variant: Pre
   const latest = useRef(renderSettings(variant, adapter, theme, colors, intensity, playback));
   const holding = useRef(false);
   const dockTarget = useRef(false);
-  const [motion] = useState(() => new MotionEngine(adapter));
+  const [motion] = useState(() => new MotionEngine(adapter, variant));
   const [open, setOpen] = useState(false);
   const width = typeof size === 'number' ? Math.max(1, size) : size === 'fill' ? undefined : SIZES[size];
 
@@ -139,6 +139,7 @@ function PresetSurface({ variant, load, ...props }: PresetProps & { variant: Pre
       inputs.motion = motion.sample(current.adapter, delta, reduced, current.tuning);
       inputs.intensity = current.intensity;
       inputs.palette = current.palette;
+      inputs.quality = Math.min(quality, Math.max(.58, Math.min(1, clientWidth / 460)));
       if (scene?.render(context, pixelWidth, pixelHeight, inputs)) {
         if (canvas.dataset.renderer !== 'webgl') canvas.dataset.renderer = 'webgl';
       } else {

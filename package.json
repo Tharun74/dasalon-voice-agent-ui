@@ -52,6 +52,22 @@
     "./contour": {
       "types": "./dist/presets/contour.d.ts",
       "import": "./dist/presets/contour.js"
+    },
+    "./mercury": {
+      "types": "./dist/presets/mercury.d.ts",
+      "import": "./dist/presets/mercury.js"
+    },
+    "./aurora-veil": {
+      "types": "./dist/presets/aurora-veil.d.ts",
+      "import": "./dist/presets/aurora-veil.js"
+    },
+    "./ink-in-water": {
+      "types": "./dist/presets/ink-in-water.d.ts",
+      "import": "./dist/presets/ink-in-water.js"
+    },
+    "./silk-veil": {
+      "types": "./dist/presets/silk-veil.d.ts",
+      "import": "./dist/presets/silk-veil.js"
     }
   },
   "scripts": {

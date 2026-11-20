@@ -44,17 +44,17 @@ export function createScene(seed: number): BuiltScene {
     rose.set(palette.shadow);
     soft.set(palette.glow);
     for (let i = 0; i < rails.length; i++) {
-      const wave = Math.sin(t * 6.0 - i * 0.68) * outward;
+      const wave = Math.sin(motion.phase * 7.2 - i * 0.68) * outward;
       const chase = Math.sin(t * 2.3 - i * 0.52) * (motion.weights.thinking + motion.weights.connecting);
       const radius = 1 + wave * 0.091 - inward * (0.10 + i * 0.012) + outward * i * 0.013;
       rails[i].scale.set(radius, radius, 1 + outward * 0.64 - inward * 0.24);
       rails[i].rotation.z = wave * 0.090 + chase * 0.076 + motion.pulse * 0.10 * (i / 8);
       foils[i].color.copy(base[i]).lerp(i % 3 === 0 ? gold : i % 3 === 1 ? rose : soft, 0.51);
       foils[i].emissive.copy(rose);
-      foils[i].emissiveIntensity = 0.07 + outward * 0.16 - quiet * 0.06;
+      foils[i].emissiveIntensity = 0.07 + outward * 0.16 + uniforms.listenRim.value * (.10 + i * .028) - quiet * 0.06;
     }
-    tilt(sculpture, motion, -0.42 + Math.sin(t * 0.73) * 0.21 + motion.weights.interrupted * 0.30,
+    tilt(sculpture, motion, -0.42 + Math.sin(t * 0.73) * 0.21 - motion.features.recoil * .54,
       0.44 + Math.sin(t * 0.57) * 0.23, 0.2 + t * 0.24);
-    sculpture.scale.setScalar(0.91 + Math.sin(t * 1.19) * 0.027 + motion.pulse * 0.053);
+    sculpture.scale.setScalar(0.91 + Math.sin(t * 1.19) * 0.027 + motion.pulse * 0.053 + motion.features.recoil * .23);
   } };
 }

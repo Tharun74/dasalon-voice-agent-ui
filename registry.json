@@ -283,6 +283,104 @@
         }
       ],
       "docs": "Import Contour from the installed voicekit/presets/contour module."
+    },
+    {
+      "name": "mercury",
+      "type": "registry:ui",
+      "title": "Mercury",
+      "description": "Liquid chrome pulls into a single mass, then sheds droplets on syllables.",
+      "registryDependencies": [
+        "http://localhost:3000/r/voicekit-core.json"
+      ],
+      "files": [
+        {
+          "path": "src/presets/mercury.tsx",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/mercury.tsx"
+        },
+        {
+          "path": "src/presets/scenes/mercury.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/mercury.ts"
+        }
+      ],
+      "docs": "Import Mercury from the installed voicekit/presets/mercury module."
+    },
+    {
+      "name": "aurora-veil",
+      "type": "registry:ui",
+      "title": "Aurora Veil",
+      "description": "Layered northern lights fold inward and flare in waves.",
+      "registryDependencies": [
+        "http://localhost:3000/r/voicekit-core.json"
+      ],
+      "files": [
+        {
+          "path": "src/presets/aurora-veil.tsx",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/aurora-veil.tsx"
+        },
+        {
+          "path": "src/presets/scenes/aurora-veil.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/aurora-veil.ts"
+        }
+      ],
+      "docs": "Import AuroraVeil from the installed voicekit/presets/aurora-veil module."
+    },
+    {
+      "name": "ink-in-water",
+      "type": "registry:ui",
+      "title": "Ink in Water",
+      "description": "Two colors of ink diffuse and curl in a clear water column.",
+      "registryDependencies": [
+        "http://localhost:3000/r/voicekit-core.json"
+      ],
+      "files": [
+        {
+          "path": "src/presets/ink-in-water.tsx",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/ink-in-water.tsx"
+        },
+        {
+          "path": "src/presets/scenes/ink-in-water.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/ink-in-water.ts"
+        },
+        {
+          "path": "src/presets/scenes/compute.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/compute.ts"
+        }
+      ],
+      "docs": "Import InkInWater from the installed voicekit/presets/ink-in-water module."
+    },
+    {
+      "name": "silk-veil",
+      "type": "registry:ui",
+      "title": "Silk Veil",
+      "description": "A single satin sheet drapes, billows and catches anisotropic light.",
+      "registryDependencies": [
+        "http://localhost:3000/r/voicekit-core.json"
+      ],
+      "files": [
+        {
+          "path": "src/presets/silk-veil.tsx",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/silk-veil.tsx"
+        },
+        {
+          "path": "src/presets/scenes/silk-veil.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/silk-veil.ts"
+        },
+        {
+          "path": "src/presets/scenes/compute.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/compute.ts"
+        }
+      ],
+      "docs": "Import SilkVeil from the installed voicekit/presets/silk-veil module."
     }
   ]
 }

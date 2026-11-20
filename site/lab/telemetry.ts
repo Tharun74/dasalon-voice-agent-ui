@@ -3,11 +3,13 @@ import type { MotionFrame } from '@/src/motion';
 import { AGENT_STATES } from '@/src/types';
 
 const LENGTH = 360;
-const TRACE = ['#8b91a3', '#f2ab8e', '#e3a56c', '#c49ff4', '#8cc7ec', '#75dfb8', '#e68fc8'];
+const SAMPLE_WIDTH = 11;
+const TRACE = ['#7ebec4', '#f2ab8e', '#e3a56c', '#c49ff4', '#8cc7ec', '#75dfb8', '#e68fc8', '#af8bb8'];
+const TRACE_FIELD = [0, 1, 2, 3, 4, 5, 6, 10];
 const STATE = ['#586577', '#c19968', '#78d7c6', '#a593f3', '#f6ab85', '#f37884', '#887f9b', '#b76273'];
 
 export class Telemetry {
-  private readonly data = new Float32Array(LENGTH * 9);
+  private readonly data = new Float32Array(LENGTH * SAMPLE_WIDTH);
   private cursor = 0;
   private size = 0;
   private lastOnset = -1;
@@ -47,21 +49,27 @@ export class Telemetry {
       this.stats.dataset.inward = '0';
       this.stats.dataset.outward = '0';
       this.stats.dataset.rawRms = '0';
+      this.stats.dataset.inputRaw = '0';
+      this.stats.dataset.outputRaw = '0';
+      this.stats.dataset.rim = '0';
+      this.stats.dataset.anticipation = '0';
       this.stats.textContent = '0 frames · — FPS';
     }
   }
 
-  record(frame: MotionFrame, dt: number, clipTime?: number, single = false) {
+  record(frame: MotionFrame, dt: number, clipTime?: number, single = false, cue = -1) {
     const channel = frame.state === 'speaking' ? 'output' : 'input';
     const value = frame.audio[channel];
     this.latest = frame;
-    const offset = this.cursor * 9;
-    this.data[offset] = value.rawRms;
+    const offset = this.cursor * SAMPLE_WIDTH;
+    this.data[offset] = frame.audio.input.rawRms;
     this.data[offset + 1] = value.rms;
     for (let i = 0; i < AUDIO_BANDS.length; i++) this.data[offset + 2 + i] = value[AUDIO_BANDS[i]];
     const isOnset = value.onsetCount > 0 && (channel !== this.lastChannel ? value.onset > .51 : value.onsetCount !== this.lastOnset);
     this.data[offset + 7] = Number(isOnset);
     this.data[offset + 8] = AGENT_STATES.indexOf(frame.state);
+    this.data[offset + 9] = cue;
+    this.data[offset + 10] = frame.audio.output.rawRms;
     this.lastOnset = value.onsetCount;
     this.lastChannel = channel;
     this.cursor = (this.cursor + 1) % LENGTH;
@@ -91,6 +99,10 @@ export class Telemetry {
     stats.dataset.onsets = String(value.onsetCount);
     stats.dataset.inward = frame.features.inward.toFixed(3);
     stats.dataset.outward = frame.features.outward.toFixed(3);
+    stats.dataset.inputRaw = frame.audio.input.rawRms.toFixed(4);
+    stats.dataset.outputRaw = frame.audio.output.rawRms.toFixed(4);
+    stats.dataset.rim = frame.features.rim.toFixed(3);
+    stats.dataset.anticipation = frame.features.anticipation.toFixed(3);
     stats.textContent = `${Math.round(1000 / this.smoothedMs)} FPS · ${this.smoothedMs.toFixed(1)} ms · ${this.counter} frames · ${this.elapsed.toFixed(2)} s`;
   }
 
@@ -129,22 +141,31 @@ export class Telemetry {
     const step = area / Math.max(119, this.size - 1);
     const startX = width - pad - (this.size - 1) * step;
     for (let channel = 0; channel < TRACE.length; channel++) {
+      const field = TRACE_FIELD[channel];
+      const isRms = field < 2 || field === 10;
       stage.strokeStyle = TRACE[channel];
       stage.lineWidth = channel === 1 ? 1.75 : 1.15;
       stage.beginPath();
       for (let i = 0; i < this.size; i++) {
-        const value = this.data[((first + i) % LENGTH) * 9 + channel];
+        const value = this.data[((first + i) % LENGTH) * SAMPLE_WIDTH + field];
         const x = startX + i * step;
-        const y = channel < 2 ? top + rmsHeight * (1 - value) : bandTop + bandHeight * (1 - value);
+        const y = isRms ? top + rmsHeight * (1 - value) : bandTop + bandHeight * (1 - value);
         if (i === 0) stage.moveTo(x, y); else stage.lineTo(x, y);
       }
       stage.stroke();
     }
+    let previousCue = -1;
     for (let i = 0; i < this.size; i++) {
-      const offset = ((first + i) % LENGTH) * 9;
+      const offset = ((first + i) % LENGTH) * SAMPLE_WIDTH;
       const x = startX + i * step;
       stage.fillStyle = STATE[this.data[offset + 8]];
       stage.fillRect(x, timeline, Math.max(1, step + .15), 6);
+      const cue = this.data[offset + 9];
+      if (cue >= 0 && cue !== previousCue) {
+        stage.fillStyle = '#fafafa85';
+        stage.fillRect(x, top, 1, timeline - top + 8);
+      }
+      previousCue = cue;
       if (this.data[offset + 7]) {
         stage.fillStyle = '#f6bd8d';
         stage.fillRect(x, top, 1, rmsHeight);

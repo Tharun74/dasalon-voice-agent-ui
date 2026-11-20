@@ -1,5 +1,5 @@
 import type { MotionFrame } from '../motion.js';
-import type { Color, Group, Object3D } from 'three';
+import type { Color, Group, Object3D, WebGLRenderer } from 'three';
 import { smooth } from '../audio.js';
 
 export interface Palette {
@@ -12,17 +12,18 @@ export interface SceneInputs {
   motion: MotionFrame;
   intensity: number;
   palette: Palette;
+  quality?: number;
   dockOpen?: number;
 }
 
 export interface BuiltScene {
   object: Group;
-  update(inputs: SceneInputs): void;
+  update(inputs: SceneInputs, renderer: WebGLRenderer): void;
   dispose?(): void;
 }
 
 export interface SceneModule {
-  createScene(seed: number): BuiltScene;
+  createScene(seed: number, renderer: WebGLRenderer): BuiltScene;
 }
 
 export type SceneLoader = () => Promise<SceneModule>;

@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { AudioLines, ChevronRight, Clipboard, FileAudio, Mic, Pause, Play, RotateCcw, StepForward } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { VoiceAgent } from '@/src/VoiceAgent';
-import { DemoAdapter, MicAdapter } from '@/src/adapters';
+import { DEMO_SCENARIOS, DemoAdapter, MicAdapter } from '@/src/adapters';
+import type { DemoScenarioId } from '@/src/adapters';
 import { motionTuning } from '@/src/motion';
 import type { MotionFrame, MotionTransport, MotionTuning } from '@/src/motion';
 import type { PresetName } from '@/src/presets/catalog';
@@ -46,7 +47,7 @@ class LabTransport implements MotionTransport {
 }
 
 const legend = [
-  ['Raw RMS', '#8b91a3'], ['Smoothed RMS', '#f2ab8e'], ['Bass', '#e3a56c'], ['Low mids', '#c49ff4'],
+  ['User raw RMS', '#7ebec4'], ['Agent raw RMS', '#af8bb8'], ['Smoothed RMS', '#f2ab8e'], ['Bass', '#e3a56c'], ['Low mids', '#c49ff4'],
   ['Mids', '#8cc7ec'], ['Presence', '#75dfb8'], ['Treble', '#e68fc8'], ['Onset markers', '#f6bd8d'],
 ];
 
@@ -86,9 +87,15 @@ export function AudioLab({ initialVariant }: { initialVariant: PresetName }) {
   const [clip, setClip] = useState<ClipAdapter>();
   const [name, setName] = useState('');
   const [direction, setDirection] = useState<'listening' | 'speaking'>('speaking');
+  const latestDirection = useRef(direction);
   const [loading, setLoading] = useState(false);
   const [fileError, setFileError] = useState('');
   const [demoMode, setDemoMode] = useState<AgentState | 'auto'>('auto');
+  const [scenario, setScenario] = useState<DemoScenarioId>();
+  const [scenarioRun, setScenarioRun] = useState(0);
+  const [activeCue, setActiveCue] = useState(-1);
+  const [visualState, setVisualState] = useState<AgentState>('idle');
+  const [showState, setShowState] = useState(true);
   const [copyResult, setCopyResult] = useState('');
   const audio = useRef<ClipAdapter | undefined>(undefined);
   const scrubbing = useRef<ClipAdapter | undefined>(undefined);
@@ -97,13 +104,26 @@ export function AudioLab({ initialVariant }: { initialVariant: PresetName }) {
   const stats = useRef<HTMLOutputElement>(null);
   const range = useRef<HTMLInputElement>(null);
   const position = useRef<HTMLOutputElement>(null);
+  const scenarioProgress = useRef<HTMLProgressElement>(null);
+  const lastVisual = useRef<AgentState>('idle');
+  const lastCue = useRef(-1);
   const adapter: VoiceAgentAdapter = source === 'mic' ? mic : source === 'clip' && clip ? clip : demo;
   const { state, error } = useSyncExternalStore(adapter.subscribe, adapter.getSnapshot, adapter.getSnapshot);
   const tuning = useMemo(() => overrides[variant] ?? motionTuning(variant), [overrides, variant]);
 
   const onFrame = useCallback((frame: MotionFrame, realDelta: number) => {
-    telemetry.record(frame, realDelta, transport.source === 'clip' && !scrubbing.current ? transport.clip?.position() : undefined, !transport.running);
-  }, [telemetry, transport]);
+    if (frame.state !== lastVisual.current) {
+      lastVisual.current = frame.state;
+      setVisualState(frame.state);
+    }
+    const cue = transport.source === 'demo' ? demo.scenarioCue : -1;
+    if (cue !== lastCue.current) {
+      lastCue.current = cue;
+      setActiveCue(cue);
+    }
+    if (scenarioProgress.current) scenarioProgress.current.value = demo.scenarioPosition;
+    telemetry.record(frame, realDelta, transport.source === 'clip' && !scrubbing.current ? transport.clip?.position() : undefined, !transport.running, cue);
+  }, [demo, telemetry, transport]);
   const playback = useMemo(() => ({ tuning, transport, onFrame }), [tuning, transport, onFrame]);
 
   useEffect(() => {
@@ -151,15 +171,34 @@ export function AudioLab({ initialVariant }: { initialVariant: PresetName }) {
     transport.source = next;
     transport.clip = nextClip;
     transport.pending = 0;
-    transport.sampleAfterSeek = false;
+    transport.sampleAfterSeek = next !== 'demo';
     transport.refocusIn = next === 'demo' && demoMode === 'interrupted' ? .59 : 0;
     transport.running = next === 'demo';
     setPlaying(transport.running);
     setSource(next);
     telemetry.reset();
     if (next === 'demo') {
-      if (demoMode === 'auto') demo.start();
+      if (scenario) demo.playScenario(scenario);
+      else if (demoMode === 'auto') demo.start();
       else demo.preview(demoMode);
+    }
+  }
+
+  function startScenario(next: DemoScenarioId | undefined) {
+    setScenario(next);
+    setScenarioRun(run => run + 1);
+    transport.refocusIn = 0;
+    transport.pending = 0;
+    transport.sampleAfterSeek = false;
+    transport.running = true;
+    setPlaying(true);
+    telemetry.reset();
+    lastCue.current = -1;
+    setActiveCue(-1);
+    if (next) demo.playScenario(next);
+    else {
+      setDemoMode('auto');
+      demo.start();
     }
   }
 
@@ -170,7 +209,7 @@ export function AudioLab({ initialVariant }: { initialVariant: PresetName }) {
     try {
       const next = await ClipAdapter.decode(await getBytes());
       if (id !== generation.current) { next.dispose(); return; }
-      next.setDirection(direction);
+      next.setDirection(latestDirection.current);
       next.setRate(transport.speed);
       audio.current?.dispose();
       audio.current = next;
@@ -237,6 +276,14 @@ export function AudioLab({ initialVariant }: { initialVariant: PresetName }) {
   }
 
   const displayName = catalog.find(item => item.variant === variant)?.name;
+  const displayState = source === 'clip' && !playing ? state : visualState;
+  const selectedScenario = scenario ? DEMO_SCENARIOS[scenario] : undefined;
+  let scenarioDuration = 0;
+  const markers = selectedScenario?.cues.map(cue => {
+    const at = scenarioDuration;
+    scenarioDuration += cue.seconds;
+    return { ...cue, at };
+  });
   return <div className="site-width space-y-6 py-9 sm:py-13">
     <header>
       <p className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground">VoiceKit <ChevronRight className="size-3" /> Motion</p>
@@ -251,11 +298,38 @@ export function AudioLab({ initialVariant }: { initialVariant: PresetName }) {
       </div>
       <div className="flex items-center gap-2">
         <label htmlFor="lab-preset" className="text-sm text-muted-foreground">Preset</label>
-        <select id="lab-preset" className={selectStyle} value={variant} onChange={event => { telemetry.reset(); setVariant(event.target.value as PresetName); }}>
+        <select id="lab-preset" className={selectStyle} value={variant} onChange={event => {
+          transport.sampleAfterSeek = !transport.running;
+          telemetry.reset();
+          setVariant(event.target.value as PresetName);
+        }}>
           {catalog.map(item => <option value={item.variant} key={item.variant}>{item.name}</option>)}
         </select>
       </div>
     </div>
+
+    {source === 'demo' ? <section aria-label="Test scenarios" className="space-y-3 rounded-xl border bg-card p-3.5">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <label htmlFor="lab-scenario" className="text-sm text-muted-foreground">Test scenario</label>
+        <select id="lab-scenario" className={selectStyle} value={scenario ?? ''}
+          onChange={event => startScenario(event.target.value as DemoScenarioId || undefined)}>
+          <option value="">Scripted conversation</option>
+          {Object.entries(DEMO_SCENARIOS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}
+        </select>
+        {scenario ? <Button type="button" size="sm" variant="outline" onClick={() => startScenario(scenario)}>
+          <RotateCcw className="size-3.5" /> Replay scenario
+        </Button> : null}
+      </div>
+      {markers ? <div className="space-y-2">
+        <progress ref={scenarioProgress} aria-label="Scenario playback position" value={0} max={scenarioDuration} className="block h-1.5 w-full accent-[var(--rose)]" />
+        <ol aria-label="Scenario timeline markers" className="flex flex-wrap gap-1.5 text-[11px]">
+          {markers.map((cue, index) => <li key={cue.at} aria-current={index === activeCue ? 'step' : undefined}
+            className="rounded-md border px-2 py-1 text-muted-foreground aria-[current=step]:border-[var(--rose)] aria-[current=step]:text-foreground">
+            <span className="mr-1.5 font-mono">{cue.at.toFixed(2)} s</span>{cue.label}
+          </li>)}
+        </ol>
+      </div> : null}
+    </section> : null}
 
     {source === 'clip' ? <section aria-label="Audio file controls" className="space-y-3 rounded-xl border bg-card p-3.5">
       <div className="flex flex-wrap items-center justify-between gap-2.5">
@@ -280,6 +354,7 @@ export function AudioLab({ initialVariant }: { initialVariant: PresetName }) {
           <label htmlFor="clip-direction" className="text-xs text-muted-foreground">Treat as</label>
           <select className={selectStyle} id="clip-direction" value={direction} onChange={event => {
             const next = event.target.value as typeof direction;
+            latestDirection.current = next;
             setDirection(next);
             clip?.setDirection(next);
             if (!transport.running) transport.sampleAfterSeek = true;
@@ -301,10 +376,10 @@ export function AudioLab({ initialVariant }: { initialVariant: PresetName }) {
       <section aria-label="Preset playback" className="min-w-0 overflow-hidden rounded-xl border bg-card">
         <div className="flex items-center justify-between gap-3 border-b p-3.5">
           <h2 className="text-sm font-semibold">{displayName}</h2>
-          <span role="status" className="flex items-center gap-2 text-xs text-muted-foreground"><i className="size-1.5 rounded-full bg-[var(--rose)]" />{STATE_LABELS[state]}</span>
+          {showState ? <span role="status" className="flex items-center gap-2 text-xs text-muted-foreground"><i className="size-1.5 rounded-full bg-[var(--rose)]" />{STATE_LABELS[displayState]}</span> : null}
         </div>
         <div className="voice-canvas h-64 sm:h-[318px]">
-          <VoiceAgent variant={variant} adapter={adapter} size="fill" motion={playback} />
+          <VoiceAgent key={`${source}-${scenarioRun}`} variant={variant} adapter={adapter} size="fill" motion={playback} />
         </div>
         <div className="flex flex-wrap items-center gap-2.5 border-t p-3">
           <Button type="button" size="sm" onClick={() => void toggle()} disabled={source === 'clip' && !clip}>
@@ -321,7 +396,10 @@ export function AudioLab({ initialVariant }: { initialVariant: PresetName }) {
               setSpeed(next);
             }}>{[.1, .25, .5, .75, 1].map(rate => <option key={rate} value={rate}>{rate}×</option>)}</select>
           </div>
-          {source === 'demo' ? <div className="flex items-center gap-2 text-xs"><label htmlFor="lab-turn">Turn</label>
+          <Button type="button" size="sm" variant="ghost" aria-pressed={!showState} onClick={() => setShowState(value => !value)}>
+            {showState ? 'Hide state label' : 'Show state label'}
+          </Button>
+          {source === 'demo' && !scenario ? <div className="flex items-center gap-2 text-xs"><label htmlFor="lab-turn">Turn</label>
             <select id="lab-turn" className={`${selectStyle} h-8 text-xs`} value={demoMode} onChange={event => {
               const mode = event.target.value as typeof demoMode;
               setDemoMode(mode);
@@ -344,7 +422,7 @@ export function AudioLab({ initialVariant }: { initialVariant: PresetName }) {
           <h2 className="text-sm font-semibold">Signal telemetry</h2>
           <output ref={stats} aria-label="Frame rate and frame time" className="font-mono text-[10px] text-muted-foreground">0 frames · — FPS</output>
         </div>
-        <canvas ref={graph} className="block h-[252px] w-full sm:h-[307px]" aria-label="Raw and smoothed RMS, five band envelopes, onset markers and state timeline for the latest 360 frames" />
+        <canvas ref={graph} className="block h-[252px] w-full sm:h-[307px]" aria-label="User and agent RMS, smoothed RMS, five band envelopes, onset and scenario markers, and state timeline for the latest 360 frames" />
         <div className="space-y-2.5 border-t p-3 text-[11px] text-muted-foreground">
           <div className="flex flex-wrap gap-x-3 gap-y-1.5">
             {legend.map(([label, color]) => <span key={label} className="flex items-center gap-1.5"><i className="size-2 rounded-full" style={{ background: color }} />{label}</span>)}
