@@ -7,6 +7,7 @@ const TAU = Math.PI * 2;
 export function fallbackRenderer(variant: PresetName, seed: number) {
   const random = randomFor(seed);
   const points = variant === 'stardust' ? Array.from({ length: 520 }, () => [random() * TAU, Math.sqrt(random()), random()]) : [];
+  const flock = variant === 'murmuration' ? Float32Array.from({ length: 1100 }, random) : undefined;
   return (ctx: CanvasRenderingContext2D, width: number, height: number, inputs: SceneInputs, lightweight: boolean) => {
     const { motion, palette } = inputs;
     const { inward, outward, quiet } = energy(inputs);
@@ -30,7 +31,91 @@ export function fallbackRenderer(variant: PresetName, seed: number) {
     ctx.fillStyle = light;
     ctx.strokeStyle = light;
 
-    if (variant === 'dock') {
+    if (variant === 'murmuration' && flock) {
+      ctx.globalCompositeOperation = 'lighter';
+      const count = lightweight || motion.reducedMotion ? 280 : 550;
+      const swell = aperture * (1 - motion.weights.thinking * .35);
+      for (let group = 0; group < 3; group++) {
+        ctx.beginPath();
+        ctx.lineWidth = .78 + group * .19;
+        ctx.strokeStyle = group === 2 ? palette.highlight : group === 1 ? palette.glow : palette.shadow;
+        ctx.globalAlpha = (.34 + group * .18 + motion.features.rim * .18) * (1 - quiet * .47);
+        for (let index = group; index < count; index += 3) {
+          const t = index / count * TAU + motion.phase * .52;
+          const spread = flock[index * 2] - .5;
+          const orbit = (79 + spread * 35) * swell;
+          const x = Math.cos(t) * orbit;
+          const y = (Math.sin(t) * .58 + Math.sin(t * 2 + spread * 5) * .26) * orbit;
+          const wings = 1.05 + flock[index * 2 + 1] * 1.9;
+          ctx.moveTo(x - wings, y - wings * .45);
+          ctx.lineTo(x, y + wings * Math.sin(t) * .45);
+          ctx.lineTo(x + wings, y - wings * .45);
+        }
+        ctx.stroke();
+      }
+    } else if (variant === 'liquid-glass') {
+      const aspect = width / height;
+      const lensWidth = Math.min(width * .43, height * .7826) / scale;
+      const halfX = lensWidth * (1 - motion.features.inward * .22 + motion.features.outward * .18 + motion.features.recoil * .24);
+      const halfY = lensWidth / 3.3 * (1 - motion.features.inward * .15 + motion.features.outward * .12);
+      ctx.rotate(motion.x * -.035 + Math.sin(motion.phase * .84) * (.028 + outward * .039));
+      const shell = ctx.createLinearGradient(-halfX * .25, -halfY, halfX * .25, halfY);
+      shell.addColorStop(0, '#e0effeae');
+      shell.addColorStop(.16, '#adc1e556');
+      shell.addColorStop(.41, '#8ecdf625');
+      shell.addColorStop(.72, '#887fd12c');
+      shell.addColorStop(1, '#a799e2a8');
+      ctx.beginPath();
+      ctx.roundRect(-halfX, -halfY, halfX * 2, halfY * 2, halfY);
+      ctx.fillStyle = shell;
+      ctx.fill();
+      ctx.lineWidth = .85 + motion.features.rim * .39;
+      ctx.strokeStyle = palette.highlight;
+      ctx.globalAlpha = (.69 + motion.features.rim * .24) * (1 - quiet * .48);
+      ctx.stroke();
+      ctx.clip();
+      for (let line = 0; line < 4; line++) {
+        ctx.beginPath();
+        ctx.moveTo(-halfX, halfY * (.5 + line * .14));
+        ctx.bezierCurveTo(-halfX * .25, -halfY * (.38 + line * .23), halfX * .3, halfY * (.75 + outward), halfX, -halfY * .45);
+        ctx.strokeStyle = line < 2 ? palette.glow : '#bddeff';
+        ctx.globalAlpha = (.33 - line * .043) * Math.min(1, aspect);
+        ctx.stroke();
+      }
+    } else if (variant === 'jewel') {
+      const gleam = ctx.createLinearGradient(-63, -77, 71, 62);
+      gleam.addColorStop(0, palette.highlight);
+      gleam.addColorStop(.33, palette.glow);
+      gleam.addColorStop(.55, '#42577e');
+      gleam.addColorStop(.82, palette.shadow);
+      gleam.addColorStop(1, '#6a61ad');
+      ctx.rotate(-.15 + Math.sin(motion.phase * .48) * .16);
+      ctx.scale(aperture, aperture);
+      const facets = [[0,-69, -51,-43, -70,-13], [0,-69,-70,-13,-21,-8], [0,-69,-21,-8,31,-5], [0,-69,31,-5,62,-20],
+        [-70,-13,-21,-8,2,78], [-21,-8,31,-5,2,78], [31,-5,62,-20,2,78], [0,-69,62,-20,47,-52]];
+      const split = Math.max(0, -motion.features.recoil) * 23 + motion.weights.interrupted * 14;
+      for (let i=0; i<facets.length; i++) {
+        const p = facets[i];
+        const x = Math.cos(i * 2.39) * split, y = Math.sin(i * 2.39) * split;
+        ctx.beginPath();
+        ctx.moveTo(p[0]+x,p[1]+y);ctx.lineTo(p[2]+x,p[3]+y);ctx.lineTo(p[4]+x,p[5]+y);ctx.closePath();
+        ctx.fillStyle = i%3===0 ? palette.glow : gleam;
+        ctx.globalAlpha = (.57+i*.045+Math.sin(motion.phase+i)*.083)*(1-quiet*.52);
+        ctx.fill();
+        ctx.lineWidth = .78 + motion.features.rim * .5;
+        ctx.strokeStyle = i%2===0 ? palette.highlight : '#a8b7e3';
+        ctx.stroke();
+      }
+      for (let i=0;i<9;i++) {
+        const turn = i*2.39+motion.phase*.34;
+        const x=Math.cos(turn)*87, y=Math.sin(turn)*69;
+        const star = Math.pow(Math.max(0,Math.sin(motion.phase*.76+i*7.3)),4)*(2.4+motion.features.sparkle*3.5);
+        ctx.globalAlpha=(.27+star*.17)*(1-quiet*.52);
+        ctx.strokeStyle=palette.highlight;
+        ctx.lineWidth=.68;
+        ctx.beginPath();ctx.moveTo(x-star,y);ctx.lineTo(x+star,y);ctx.moveTo(x,y-star);ctx.lineTo(x,y+star);ctx.stroke();
+      }
+    } else if (variant === 'dock') {
       const open = inputs.dockOpen ?? 0;
       const length = 103 + outward * 21 - inward * 12 + open * 15 + motion.features.recoil * 18;
       ctx.translate(0, -open * 35);

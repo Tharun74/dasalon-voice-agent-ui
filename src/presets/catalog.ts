@@ -16,17 +16,24 @@ export const PRESETS = {
   "aurora-veil": { name: "Aurora Veil", component: "AuroraVeil", description: "Layered northern lights fold inward and flare in waves.", accent: "#89f4ca" },
   "ink-in-water": { name: "Ink in Water", component: "InkInWater", description: "Two colors of ink diffuse and curl in a clear water column.", accent: "#62c6c4" },
   "silk-veil": { name: "Silk Veil", component: "SilkVeil", description: "A single satin sheet drapes, billows and catches anisotropic light.", accent: "#d282b2" },
+  "murmuration": { name: "Murmuration", component: "Murmuration", description: "A luminous flock of tiny winged silhouettes banks and reforms in three dimensions.", accent: "#b49ad9" },
+  "liquid-glass": { name: "Liquid Glass", component: "LiquidGlass", description: "A transparent capsule bends the page beneath it and catches prismatic light.", accent: "#8dc5e8" },
+  "muse": { name: "Muse", component: "Muse", description: "An expressive line-drawn presence with blinking eyes and a voice-shaped mouth.", accent: "#e3b5a4" },
+  "jewel": { name: "Jewel", component: "Jewel", description: "A suspended, faceted gem with chromatic caustics and a barge-in fracture.", accent: "#c499ed" },
+  "kinetic-type": { name: "Kinetic Type", component: "KineticType", description: "Live words slide into place, stretch with syllables and breathe in depth.", accent: "#fdd6a3" },
 } as const;
 
 export type PresetName = keyof typeof PRESETS;
 export const PRESET_NAMES = Object.keys(PRESETS) as PresetName[];
 
 export type PresetSize = 'sm' | 'md' | 'lg' | 'fill' | number;
+export type PresetQuality = 'preview' | 'full';
 
 export interface PresetProps {
   adapter: VoiceAgentAdapter;
   theme?: ThemeName;
   size?: PresetSize;
+  quality?: PresetQuality;
   /** Overall audio response, from 0 to 2. */
   intensity?: number;
   seed?: number;

@@ -11,7 +11,7 @@ import type { PresetName, PresetProps } from './catalog.js';
 import { fallbackRenderer } from './fallback.js';
 import type { LoadVisual } from './load-scene.js';
 import type { MountedScene } from './webgl.js';
-import type { SceneInputs } from './runtime.js';
+import type { CanvasVisual, SceneInputs } from './runtime.js';
 
 const SIZES = { sm: 176, md: 300, lg: 520 };
 function renderSettings(variant: PresetName, adapter: VoiceAgentAdapter, theme: PresetProps['theme'], colors: PresetProps['colors'],
@@ -46,8 +46,8 @@ function DockPanel({ adapter }: { adapter: VoiceAgentAdapter }) {
   );
 }
 
-function PresetSurface({ variant, load, ...props }: PresetProps & { variant: PresetName; load?: LoadVisual }) {
-  const { adapter, theme, size = 'md', intensity = 1, seed = 42, colors, className, style, interactive = true, onPushToTalk, motion: playback } = props;
+function PresetSurface({ variant, load, draw, ...props }: PresetProps & { variant: PresetName; load?: LoadVisual; draw?: CanvasVisual }) {
+  const { adapter, theme, size = 'md', quality: tier = 'preview', intensity = 1, seed = 42, colors, className, style, interactive = true, onPushToTalk, motion: playback } = props;
   const surface = useRef<HTMLCanvasElement>(null);
   const latest = useRef(renderSettings(variant, adapter, theme, colors, intensity, playback));
   const holding = useRef(false);
@@ -88,8 +88,8 @@ function PresetSurface({ variant, load, ...props }: PresetProps & { variant: Pre
     let paintedWhileLoading = false;
     let painted = false;
     let paintedSettings = latest.current;
-    const inputs: SceneInputs = { motion: motion.peek(), intensity: latest.current.intensity, palette: latest.current.palette, dockOpen: 0 };
-    const drawFallback = fallbackRenderer(variant, seed);
+    const inputs: SceneInputs = { motion: motion.peek(), intensity: latest.current.intensity, palette: latest.current.palette, dockOpen: 0, tier };
+    const drawFallback = (draw ?? (seed => fallbackRenderer(variant, seed)))(seed);
     if (load) {
       void load(canvas.ownerDocument, seed, loading.signal).then(mounted => {
         if (loading.signal.aborted) mounted?.dispose();
@@ -107,25 +107,25 @@ function PresetSurface({ variant, load, ...props }: PresetProps & { variant: Pre
       if (!clientWidth || !clientHeight || canvas.checkVisibility?.({ visibilityProperty: true }) === false) return;
       const current = latest.current;
       const delta = deltaSeconds(current.playback?.transport?.advance(deltaSeconds(dt)) ?? dt);
-      if (scene) {
-        // Persistent GPU stalls can survive resolution scaling, especially on software WebGL.
-        stalled = dt > 0.085 ? stalled + 1 : Math.max(0, stalled - 1);
-        if (stalled >= 5) {
-          scene.dispose();
-          scene = undefined;
-          quality = 1;
-        }
-      }
-      if (!reduced && scene) {
+      if (!reduced && (scene || draw)) {
         const frameBudget = current.frameIntervalMs / 1000;
         slow = dt > Math.max(0.025, frameBudget * 1.45) ? slow + 1 : Math.max(0, slow - 2);
         if (slow > 8) { quality = Math.max(0.60, quality - 0.15); slow = 0; }
         fast = dt < Math.max(0.022, frameBudget * 1.12) ? fast + 1 : 0;
         if (fast > 150 && quality < 1) { quality = Math.min(1, quality + 0.10); fast = 0; }
       }
-      lightweight = load ? !loadingScene && !scene : current.maxPixelRatio <= 1;
+      if (scene && quality <= .67) {
+        // Give a reduced render tier time to recover before relinquishing WebGL.
+        stalled = Math.max(0, stalled + (dt > .085 ? Math.min(dt, .20) : -dt * 3));
+        if (stalled >= .80) {
+          scene.dispose();
+          scene = undefined;
+          quality = 1;
+        }
+      } else stalled = 0;
+      lightweight = !!load && !loadingScene && !scene;
       const dpr = canvas.ownerDocument.defaultView?.devicePixelRatio ?? 1;
-      const maxRatio = lightweight ? 0.68 : clientWidth < 500 ? 1.5 : 2;
+      const maxRatio = lightweight ? 0.82 : tier === 'preview' ? 1 : clientWidth < 500 ? 1.5 : 2;
       const ratio = Math.min(dpr, current.maxPixelRatio, maxRatio) * quality;
       const pixelWidth = Math.max(1, Math.round(clientWidth * ratio));
       const pixelHeight = Math.max(1, Math.round(clientHeight * ratio));
@@ -139,7 +139,9 @@ function PresetSurface({ variant, load, ...props }: PresetProps & { variant: Pre
       inputs.motion = motion.sample(current.adapter, delta, reduced, current.tuning);
       inputs.intensity = current.intensity;
       inputs.palette = current.palette;
-      inputs.quality = Math.min(quality, Math.max(.58, Math.min(1, clientWidth / 460)));
+      inputs.aspect = pixelWidth / pixelHeight;
+      if (draw) inputs.transcript = current.adapter.getSnapshot().transcript;
+      inputs.quality = tier === 'preview' ? quality : Math.min(quality, Math.max(.58, Math.min(1, clientWidth / 460)));
       if (scene?.render(context, pixelWidth, pixelHeight, inputs)) {
         if (canvas.dataset.renderer !== 'webgl') canvas.dataset.renderer = 'webgl';
       } else {
@@ -153,7 +155,7 @@ function PresetSurface({ variant, load, ...props }: PresetProps & { variant: Pre
       if (delta) current.playback?.onFrame?.(inputs.motion, dt);
     }, () => Math.max(latest.current.frameIntervalMs, lightweight ? 1000 / 30 : 0));
     return () => { resize?.disconnect(); loading.abort(); stop(); scene?.dispose(); };
-  }, [variant, seed, load, motion]);
+  }, [variant, seed, tier, load, draw, motion]);
 
   function hold(held: boolean) {
     if (!onPushToTalk || holding.current === held) return;
@@ -212,8 +214,8 @@ function PresetSurface({ variant, load, ...props }: PresetProps & { variant: Pre
   );
 }
 
-export function createPreset(variant: PresetName, load?: LoadVisual) {
-  function Preset(props: PresetProps) { return <PresetSurface {...props} variant={variant} load={load} />; }
+export function createPreset(variant: PresetName, load?: LoadVisual, draw?: CanvasVisual) {
+  function Preset(props: PresetProps) { return <PresetSurface {...props} variant={variant} load={load} draw={draw} />; }
   Preset.displayName = PRESETS[variant].component;
   return Preset;
 }

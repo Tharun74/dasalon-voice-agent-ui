@@ -6,9 +6,9 @@ import { feed, PARAMS, uniformsFor } from './shading.js';
 
 const solver = `
   varying vec2 coord;
-  uniform sampler2D flow, pigment, scalarField, pressure;
-  uniform vec2 pixel, pointerAt, pointerForce;
-  uniform float delta, seconds, seed, squeeze, burst, attention, impulse;
+  uniform sampler2D flow, pigment, predictor, scalarField, pressure;
+  uniform vec2 pixel, dyePixel, pointerAt, pointerForce, nozzle;
+  uniform float delta, seconds, seed, squeeze, burst, attention, impulse, dose;
   uniform int operation;
   float bell(vec2 p, float radius) { return exp(-dot(p,p) / (radius * radius)); }
   vec2 roll(vec2 p,float strength,float width) { return vec2(-p.y,p.x) * strength * bell(p,width); }
@@ -33,6 +33,8 @@ const solver = `
       curl += d * (burst * 2.6 - squeeze * 2.9) * bell(d,.19);
       velocity += curl * delta;
       velocity += d * impulse * bell(d,.19) * .12;
+      vec2 plume = uv - nozzle;
+      velocity += dose * bell(plume,.09) * vec2(plume.x * 3.4, .63 + plume.y * 1.7);
       velocity *= smoothstep(.002,.065,min(uv.x,1.0-uv.x)) * smoothstep(.002,.065,min(uv.y,1.0-uv.y));
       gl_FragColor = vec4(clamp(velocity,-.65,.65),0,1);
     } else if (operation == 1) {
@@ -47,16 +49,22 @@ const solver = `
       vec2 winding = .5 * vec2(abs(texture2D(scalarField,uv+x).g)-abs(texture2D(scalarField,uv-x).g),
         abs(texture2D(scalarField,uv+y).g)-abs(texture2D(scalarField,uv-y).g));
       winding /= max(.001,length(winding));
-      vec2 eddy = vec2(winding.y,-winding.x) * texture2D(scalarField,uv).g * delta * 14.0;
-      gl_FragColor = vec4(readFlow(uv)-gradient+eddy,0,1);
+      vec2 eddy = vec2(winding.y,-winding.x) * texture2D(scalarField,uv).g * delta * 27.0;
+      gl_FragColor = vec4(clamp(readFlow(uv)-gradient+eddy,-.68,.68),0,1);
     } else if (operation == 4) {
-      vec2 dye = texture2D(pigment, uv - readFlow(uv) * delta).rg * exp(-delta * (.75+squeeze*.95));
-      float dotA = bell(d + vec2(.049,-.021+.04*sin(seconds*2.3)), .025 + burst * .037);
-      float dotB = bell(d - vec2(.029+.028*cos(seconds*1.9),.033), .029 + burst * .032);
-      float feeder = .87 + burst * 3.15 + impulse * .46;
-      dye += vec2(dotA, dotB) * feeder * delta;
-      dye += vec2(.16,.43) * bell(uv - pointerAt, .044) * attention * delta;
-      gl_FragColor = vec4(min(dye,vec2(2.2)),0,1);
+      // Correct forward advection with its reverse error, then bound it by the donor cell.
+      vec2 velocity = readFlow(uv);
+      vec2 from = uv - velocity * delta;
+      vec2 reverse = texture2D(predictor, uv + velocity * delta).rg;
+      vec2 estimate = texture2D(predictor, uv).rg + .5 * (texture2D(pigment,uv).rg - reverse);
+      vec2 corner = (floor(from/dyePixel - .5) + .5) * dyePixel;
+      vec2 a = texture2D(pigment,corner).rg, b = texture2D(pigment,corner+vec2(dyePixel.x,0)).rg;
+      vec2 c = texture2D(pigment,corner+vec2(0,dyePixel.y)).rg, e = texture2D(pigment,corner+dyePixel).rg;
+      vec2 dye = clamp(estimate,min(min(a,b),min(c,e)),max(max(a,b),max(c,e)));
+      dye *= exp(-delta * (.055+burst*.17+squeeze*.37));
+      float radius = mix(.032,.021,clamp(burst,0.0,1.0));
+      vec2 deposit = dose * vec2(bell(uv-nozzle,radius),bell(uv-nozzle-vec2(.031,-.018),radius*.82));
+      gl_FragColor = vec4(min(dye+deposit,vec2(1.25)),0,1);
     } else if (operation == 5) {
       float a = atan(r.y,r.x);
       float radius = length(r);
@@ -69,6 +77,8 @@ const solver = `
       gl_FragColor = vec4(dye,0,1);
     } else if (operation == 6) {
       gl_FragColor = texture2D(pigment,uv);
+    } else if (operation == 8) {
+      gl_FragColor = texture2D(pigment,uv-readFlow(uv)*delta);
     } else {
       gl_FragColor = vec4(0,0,0,1);
     }
@@ -90,14 +100,15 @@ const shadeInk = `${PARAMS}
     vec2 dye=readInk(uv);
     float density=dye.r+dye.g;
     float grad=length(vec2(length(readInk(uv+vec2(sampleSize.x,0)))-length(dye),length(readInk(uv+vec2(0,sampleSize.y)))-length(dye)));
-    float alpha=(1.0-exp(-density*2.35)) * (1.0-smoothstep(.29,.51,length(coord-.5))) * (1.0-quiet*.59);
+    float mapped = density / (.39 + density);
+    float alpha=mapped * .91 * (1.0-smoothstep(.29,.51,length(coord-.5))) * (1.0-quiet*.59);
     if(alpha<.013) discard;
     float split=dye.r/max(.001,density);
     vec3 teal=mix(vec3(.006,.52,.64),glow,.12);
     vec3 wine=mix(vec3(.61,.026,.23),glow,.22);
     vec3 color=mix(teal,wine,smoothstep(.25,.75,split))*(.33+.65*exp(-density*.92));
     color += mix(foil,vec3(.19,.61,.71),.59) * min(.39,grad*3.4) * (.65+listenRim*.39+sparkle*.35);
-    color += foil * density * .025*(1.0+connect*.5+thought*.4);
+    color += foil * mapped * .028*(1.0+connect*.5+thought*.4);
     gl_FragColor=vec4(color,alpha);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
@@ -121,14 +132,18 @@ class FluidGrid {
   readonly ink: Pair;
   readonly pressure: Pair;
   readonly divergence: WebGLRenderTarget;
+  readonly predictor: WebGLRenderTarget;
+  readonly dyeSize: number;
   constructor(readonly size: number) {
     this.flow = new Pair(size);
-    this.ink = new Pair(size);
+    this.dyeSize = size * 2;
+    this.ink = new Pair(this.dyeSize);
+    this.predictor = computeTarget(this.dyeSize);
     this.pressure = new Pair(size);
     this.divergence = computeTarget(size);
   }
   dispose() {
-    this.flow.dispose(); this.ink.dispose(); this.pressure.dispose(); this.divergence.dispose();
+    this.flow.dispose(); this.ink.dispose(); this.pressure.dispose(); this.divergence.dispose(); this.predictor.dispose();
   }
 }
 
@@ -139,8 +154,9 @@ export function createScene(seed: number, renderer: WebGLRenderer): BuiltScene {
   const uniforms = { ...uniformsFor(seed), ink: { value: null as Texture | null }, sampleSize: { value: new Vector2() } };
   const io = {
     flow: { value: null as Texture | null }, pigment: { value: null as Texture | null },
-    scalarField: { value: null as Texture | null }, pressure: { value: null as Texture | null },
-    pixel: { value: new Vector2() }, pointerAt: { value: new Vector2() }, pointerForce: { value: new Vector2() },
+    scalarField: { value: null as Texture | null }, pressure: { value: null as Texture | null }, predictor: { value: null as Texture | null },
+    pixel: { value: new Vector2() }, dyePixel: { value: new Vector2() }, nozzle: { value: new Vector2(.5, .44) },
+    pointerAt: { value: new Vector2() }, pointerForce: { value: new Vector2() }, dose: { value: 0 },
     operation: { value: 0 }, delta: { value: 1 / 45 }, seconds: { value: 0 }, seed: { value: Math.trunc(seed) % 1021 * .14 },
     squeeze: { value: 0 }, burst: { value: 0 }, attention: { value: 0 }, impulse: { value: 0 },
   };
@@ -150,7 +166,7 @@ export function createScene(seed: number, renderer: WebGLRenderer): BuiltScene {
     uniforms, vertexShader: vertex, fragmentShader: shadeInk, transparent: true, depthWrite: false, toneMapped: false,
   })));
   let grid: FluidGrid | undefined;
-  let elapsed = 0, accumulator = 0, oldX = 0, oldY = 0, resizing = 0;
+  let elapsed = 0, accumulator = 0, oldX = 0, oldY = 0, resizing = 0, lastOnset = 0, pendingDose = 0;
   function run(operation: number, target: WebGLRenderTarget) {
     io.operation.value = operation;
     pass.draw(renderer, target);
@@ -158,6 +174,7 @@ export function createScene(seed: number, renderer: WebGLRenderer): BuiltScene {
   function setGrid(size: number) {
     const last = grid;
     const next = new FluidGrid(size);
+    io.flow.value = io.pigment.value = io.pressure.value = io.scalarField.value = io.predictor.value = null;
     io.pixel.value.setScalar(1 / size);
     run(7,next.flow.a);
     run(7,next.pressure.a);
@@ -169,7 +186,8 @@ export function createScene(seed: number, renderer: WebGLRenderer): BuiltScene {
       last.dispose();
     } else run(5,next.ink.a);
     grid = next;
-    uniforms.sampleSize.value.setScalar(1 / size);
+    io.dyePixel.value.setScalar(1 / next.dyeSize);
+    uniforms.sampleSize.value.copy(io.dyePixel.value);
   }
   function step(grid: FluidGrid, dt: number, iterations: number) {
     elapsed += dt;
@@ -178,6 +196,7 @@ export function createScene(seed: number, renderer: WebGLRenderer): BuiltScene {
     io.flow.value = grid.flow.a.texture;
     run(0,grid.flow.b); grid.flow.swap();
     io.flow.value = grid.flow.a.texture;
+    io.scalarField.value = null;
     run(1,grid.divergence);
     io.scalarField.value = grid.divergence.texture;
     for (let i = 0; i < iterations; i++) {
@@ -188,14 +207,18 @@ export function createScene(seed: number, renderer: WebGLRenderer): BuiltScene {
     run(3,grid.flow.b); grid.flow.swap();
     io.flow.value = grid.flow.a.texture;
     io.pigment.value = grid.ink.a.texture;
+    io.predictor.value = null;
+    run(8,grid.predictor);
+    io.predictor.value = grid.predictor.texture;
     run(4,grid.ink.b); grid.ink.swap();
   }
   return { object, update(inputs) {
     feed(uniforms,inputs);
     const { motion } = inputs;
     const quality = inputs.quality ?? 1;
-    const size = motion.reducedMotion || quality < .67 ? 64 : quality < .88 ? 88 : 116;
-    const dt = motion.reducedMotion ? 1 / 28 : quality < .74 ? 1 / 38 : 1 / 50;
+    const preview = inputs.tier !== 'full';
+    const size = motion.reducedMotion || preview || quality < .67 ? 64 : quality < .88 ? 88 : 116;
+    const dt = motion.reducedMotion ? 1 / 28 : preview ? 1 / 26 : quality < .74 ? 1 / 38 : 1 / 50;
     const oldTarget = renderer.getRenderTarget();
     try {
       resizing = Math.max(0,resizing - motion.delta);
@@ -205,6 +228,13 @@ export function createScene(seed: number, renderer: WebGLRenderer): BuiltScene {
       }
       io.squeeze.value = uniforms.intake.value;
       io.burst.value = uniforms.release.value;
+      const onset = motion.audio.output.onsetCount;
+      if (motion.state === 'speaking' && onset > lastOnset) {
+        const angle = onset * 2.399963 + io.seed.value;
+        io.nozzle.value.set(.5 + Math.cos(angle) * .095, .44 + Math.sin(angle) * .066);
+        pendingDose = Math.min(.24, .125 + motion.beatStrengths[0] * .14);
+      } else if (motion.state !== 'speaking' || onset < lastOnset) pendingDose = 0;
+      lastOnset = onset;
       io.impulse.value = Math.max(0, -motion.features.recoil) + motion.pulse;
       io.attention.value = motion.attention;
       io.pointerAt.value.set(.5 + motion.x * .42,.5 - motion.y * .42);
@@ -212,7 +242,9 @@ export function createScene(seed: number, renderer: WebGLRenderer): BuiltScene {
       oldX = motion.x; oldY = motion.y;
       accumulator = Math.min(2 * dt, accumulator + motion.delta * (motion.reducedMotion ? .3 : 1));
       while (accumulator >= dt) {
-        step(grid!,dt,size >= 88 ? 10 : 7);
+        io.dose.value = pendingDose;
+        step(grid!,dt,preview ? 5 : size >= 88 ? 10 : 7);
+        pendingDose = 0;
         accumulator -= dt;
       }
       uniforms.ink.value = grid!.ink.a.texture;

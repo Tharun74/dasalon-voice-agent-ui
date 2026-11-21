@@ -81,6 +81,10 @@ export default function SalonVoice() {
 
 All presets take `adapter`, `theme`, `size`, `intensity`, `seed` and optional `colors` with `glow`, `highlight` and `shadow` CSS color values. Use `size="fill"` inside a container with a defined height. Use `onPushToTalk` to handle both the start and end of a pointer or keyboard hold.
 
+`quality="preview"` is the default for compact and embedded previews. Set `quality="full"` for a single focused visual. In the gallery, hold Shift+F or toggle **FPS** to see per-card render cadence and average frame time. Offscreen cards show their poster.
+
+Use `<LiquidGlass adapter={adapter} floating />` for a corner widget that refracts its page backdrop. Browsers that lack SVG backdrop filtering render frosted glass with a prismatic rim. `KineticType` reads the latest caption from the adapter and announces finalized captions when interactive.
+
 - `DemoAdapter` supplies a scripted conversation, separate simulated voices, and transcripts without a backend.
 - `MicAdapter` captures real microphone input. Call `start()` on a user gesture on HTTPS or localhost, and call `stop()` when you finish.
 - `MediaStreamAdapter` measures caller-owned user and agent streams. Connect your provider’s conversation status and transcript with `setAgentState()` and `setTranscript()`. Your app retains ownership of stream playback and tracks.

@@ -25,6 +25,7 @@ const sections = [
 const properties = [
   ['adapter', 'VoiceAgentAdapter', 'Required', 'Reads agent state, audio levels, frequency data and transcript.'],
   ['size', '“sm” | “md” | “lg” | “fill” | number', '“md”', 'Sets the maximum width in pixels. Give the parent an explicit height when using fill.'],
+  ['quality', '“preview” | “full”', '“preview”', 'Preview reduces pixel density and simulation complexity. Full enables the focused detail tier with adaptive quality.'],
   ['theme', 'ThemeName', '“rose-gold”', 'Uses one of the five finish palettes.'],
   ['intensity', 'number', '1', 'Scales the response to audio between 0 and 2.'],
   ['seed', 'number', '42', 'Controls repeatable geometry or shader variation.'],
@@ -61,6 +62,7 @@ export default async function ComponentPage({ params }: Route) {
   const previous = catalog[index - 1];
   const next = catalog[index + 1];
   const snippets = providerSnippets(item);
+  const canvas = item.docs.renderer === 'Canvas2D' || item.variant === 'dock';
 
   return <div className="site-width grid items-start gap-7 py-8 sm:py-10 lg:grid-cols-[165px_minmax(0,1fr)] xl:grid-cols-[170px_minmax(0,1fr)_137px] xl:gap-8">
     <DocsSidebar />
@@ -73,7 +75,7 @@ export default async function ComponentPage({ params }: Route) {
         <h1 className="text-[clamp(2.8rem,6vw,4rem)] leading-none font-semibold tracking-[-.057em]">{item.name}</h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">{item.description}</p>
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {[...item.tags, 'Audio-reactive', item.variant === 'dock' ? 'Canvas2D' : 'WebGL'].map(tag => <Badge key={tag} variant="outline" className="rounded-md bg-card text-[11px] text-muted-foreground">{tag}</Badge>)}
+          {[...item.tags, 'Audio-reactive', canvas ? 'Canvas2D' : 'WebGL'].map(tag => <Badge key={tag} variant="outline" className="rounded-md bg-card text-[11px] text-muted-foreground">{tag}</Badge>)}
         </div>
       </header>
       <section id="preview" aria-label="Interactive preview" className="scroll-mt-22"><ComponentPlayground item={item} /></section>
@@ -97,7 +99,7 @@ export default async function ComponentPage({ params }: Route) {
         <div className="overflow-x-auto rounded-lg border" role="region" aria-label="Preset props" tabIndex={0}>
           <table className="w-full min-w-[550px] border-collapse text-left text-[13px]">
             <thead className="bg-card text-xs"><tr>{['Name', 'Type', 'Default', 'Description'].map(label => <th scope="col" className="px-3 py-2.5 font-semibold" key={label}>{label}</th>)}</tr></thead>
-            <tbody>{properties.map(([name, type, initial, description]) => <tr key={name} className="border-t">
+            <tbody>{[...properties, ...(item.docs.props ?? [])].map(([name, type, initial, description]) => <tr key={name} className="border-t">
               <th scope="row" className="px-3 py-2.5 align-top font-medium"><code className="font-mono text-[11px]">{name}</code></th>
               <td className="px-3 py-2.5 align-top font-mono text-[11px] text-muted-foreground">{type}</td>
               <td className="px-3 py-2.5 align-top text-xs text-muted-foreground">{initial}</td>
@@ -112,7 +114,7 @@ export default async function ComponentPage({ params }: Route) {
       <Section id="notes" title="Notes">
         <div className="prose-copy space-y-3">
           <p>{item.docs.summary} {item.docs.motion}</p>
-          <p><strong className="text-foreground">Performance.</strong> {item.variant === 'dock' ? 'The dock uses Canvas2D and pauses outside the viewport.' : 'The renderer loads on the client, pauses outside the viewport and falls back to Canvas2D when WebGL is unavailable.'}</p>
+          <p><strong className="text-foreground">Performance.</strong> {canvas ? 'This preset uses Canvas2D and pauses outside the viewport.' : 'The renderer loads on the client, pauses outside the viewport and falls back to Canvas2D when WebGL is unavailable.'}</p>
           <p><strong className="text-foreground">Accessibility.</strong> Use Enter or Space to pulse the visual. Reduced motion slows the animation and reduces movement. Your app should provide spoken-state labels and transcripts.</p>
           <p><strong className="text-foreground">SSR.</strong> Import the component from a client boundary when you create a browser adapter. The initial markup can render on the server.</p>
           <Link href={`/lab?preset=${item.variant}`} prefetch={false} className="inline-flex items-center gap-1.5 font-medium text-foreground hover:underline">Tune this preset in the Audio Lab <ArrowRight aria-hidden="true" className="size-3.5" /></Link>

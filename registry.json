@@ -381,6 +381,126 @@
         }
       ],
       "docs": "Import SilkVeil from the installed voicekit/presets/silk-veil module."
+    },
+    {
+      "name": "murmuration",
+      "type": "registry:ui",
+      "title": "Murmuration",
+      "description": "A luminous flock of tiny winged silhouettes banks and reforms in three dimensions.",
+      "registryDependencies": [
+        "http://localhost:3000/r/voicekit-core.json"
+      ],
+      "files": [
+        {
+          "path": "src/presets/murmuration.tsx",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/murmuration.tsx"
+        },
+        {
+          "path": "src/presets/scenes/murmuration.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/murmuration.ts"
+        },
+        {
+          "path": "src/presets/scenes/compute.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/compute.ts"
+        }
+      ],
+      "docs": "Import Murmuration from the installed voicekit/presets/murmuration module."
+    },
+    {
+      "name": "liquid-glass",
+      "type": "registry:ui",
+      "title": "Liquid Glass",
+      "description": "A transparent capsule bends the page beneath it and catches prismatic light.",
+      "registryDependencies": [
+        "http://localhost:3000/r/voicekit-core.json"
+      ],
+      "files": [
+        {
+          "path": "src/presets/liquid-glass.tsx",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/liquid-glass.tsx"
+        },
+        {
+          "path": "src/presets/scenes/liquid-glass.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/liquid-glass.ts"
+        },
+        {
+          "path": "src/presets/scenes/glass-form.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/glass-form.ts"
+        }
+      ],
+      "docs": "Import LiquidGlass from the installed voicekit/presets/liquid-glass module."
+    },
+    {
+      "name": "muse",
+      "type": "registry:ui",
+      "title": "Muse",
+      "description": "An expressive line-drawn presence with blinking eyes and a voice-shaped mouth.",
+      "registryDependencies": [
+        "http://localhost:3000/r/voicekit-core.json"
+      ],
+      "files": [
+        {
+          "path": "src/presets/muse.tsx",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/muse.tsx"
+        },
+        {
+          "path": "src/presets/scenes/muse.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/muse.ts"
+        }
+      ],
+      "docs": "Import Muse from the installed voicekit/presets/muse module."
+    },
+    {
+      "name": "jewel",
+      "type": "registry:ui",
+      "title": "Jewel",
+      "description": "A suspended, faceted gem with chromatic caustics and a barge-in fracture.",
+      "registryDependencies": [
+        "http://localhost:3000/r/voicekit-core.json"
+      ],
+      "files": [
+        {
+          "path": "src/presets/jewel.tsx",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/jewel.tsx"
+        },
+        {
+          "path": "src/presets/scenes/jewel.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/jewel.ts"
+        }
+      ],
+      "docs": "Import Jewel from the installed voicekit/presets/jewel module."
+    },
+    {
+      "name": "kinetic-type",
+      "type": "registry:ui",
+      "title": "Kinetic Type",
+      "description": "Live words slide into place, stretch with syllables and breathe in depth.",
+      "registryDependencies": [
+        "http://localhost:3000/r/voicekit-core.json"
+      ],
+      "files": [
+        {
+          "path": "src/presets/kinetic-type.tsx",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/kinetic-type.tsx"
+        },
+        {
+          "path": "src/presets/scenes/kinetic-type.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/kinetic-type.ts"
+        }
+      ],
+      "docs": "Import KineticType from the installed voicekit/presets/kinetic-type module."
     }
   ]
 }

@@ -19,6 +19,11 @@ export const MOTION_PROFILES: Readonly<Partial<Record<PresetName, MotionTuning>>
 
 /** Idle period in seconds and a normalized amplitude for each preset. */
 export const IDLE_RHYTHMS: Readonly<Record<PresetName, readonly [period: number, amplitude: number]>> = {
+  "kinetic-type": [10.2, .49],
+  "jewel": [8.95, .64],
+  "muse": [6.55, .57],
+  "liquid-glass": [7.16, .43],
+  "murmuration": [9.8, .92],
   "silk-veil": [7.85, .82],
   "ink-in-water": [9.35, .55],
   "aurora-veil": [8.65, .79],
@@ -304,15 +309,20 @@ export function observeMotion(element: HTMLElement, draw: (delta: number, reduce
   const preference = win.matchMedia('(prefers-reduced-motion: reduce)');
   const loop = frameLoop(win);
   let last: number | undefined;
+  let deadline: number | undefined;
+  let previousInterval = 0;
   let running = false;
   let visible = !Observer;
   let reduced = preference.matches;
 
   function tick(now: number) {
     const interval = Math.max(reduced ? 48 : 0, frameInterval?.() ?? 0);
-    // Account for fractional vsync timestamps when an interval spans multiple frames.
-    if (last !== undefined && now - last + 0.75 < interval) return;
+    if (interval !== previousInterval) deadline = last === undefined ? undefined : last + interval;
+    previousInterval = interval;
+    if (interval && deadline !== undefined && now + .75 < deadline) return;
     const delta = last === undefined ? 1 / 60 : (now - last) / 1000;
+    // Retain fractional refresh intervals without rendering catch-up frames after a stall.
+    deadline = !interval || deadline === undefined || now - deadline >= interval ? now + interval : deadline + interval;
     last = now;
     draw(delta, reduced, now);
   }
@@ -325,6 +335,7 @@ export function observeMotion(element: HTMLElement, draw: (delta: number, reduce
     else {
       loop.remove(tick);
       last = undefined;
+      deadline = undefined;
     }
   }
 

@@ -12,9 +12,19 @@ import { Mercury } from './presets/mercury.js';
 import { AuroraVeil } from './presets/aurora-veil.js';
 import { InkInWater } from './presets/ink-in-water.js';
 import { SilkVeil } from './presets/silk-veil.js';
+import { Murmuration } from './presets/murmuration.js';
+import { LiquidGlass } from './presets/liquid-glass.js';
+import { Muse } from './presets/muse.js';
+import { Jewel } from './presets/jewel.js';
+import { KineticType } from './presets/kinetic-type.js';
 import type { VoiceAgentProps } from './presets/catalog.js';
 
 const components = {
+  "kinetic-type": KineticType,
+  "jewel": Jewel,
+  "muse": Muse,
+  "liquid-glass": LiquidGlass,
+  "murmuration": Murmuration,
   "silk-veil": SilkVeil,
   "ink-in-water": InkInWater,
   "aurora-veil": AuroraVeil,

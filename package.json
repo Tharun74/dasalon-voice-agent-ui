@@ -68,6 +68,26 @@
     "./silk-veil": {
       "types": "./dist/presets/silk-veil.d.ts",
       "import": "./dist/presets/silk-veil.js"
+    },
+    "./murmuration": {
+      "types": "./dist/presets/murmuration.d.ts",
+      "import": "./dist/presets/murmuration.js"
+    },
+    "./liquid-glass": {
+      "types": "./dist/presets/liquid-glass.d.ts",
+      "import": "./dist/presets/liquid-glass.js"
+    },
+    "./muse": {
+      "types": "./dist/presets/muse.d.ts",
+      "import": "./dist/presets/muse.js"
+    },
+    "./jewel": {
+      "types": "./dist/presets/jewel.d.ts",
+      "import": "./dist/presets/jewel.js"
+    },
+    "./kinetic-type": {
+      "types": "./dist/presets/kinetic-type.d.ts",
+      "import": "./dist/presets/kinetic-type.js"
     }
   },
   "scripts": {

@@ -173,8 +173,8 @@ export function createScene(seed: number, renderer: WebGLRenderer): BuiltScene {
   return { object, update(inputs) {
     const {motion}=inputs;
     const q=inputs.quality??1;
-    const width=motion.reducedMotion||q<.67?27:q<.89?36:46;
-    const tick=width<=27?1/42:1/62;
+    const width=motion.reducedMotion||inputs.tier!=='full'||q<.67?27:q<.89?36:46;
+    const tick=inputs.tier==='preview'?1/28:width<=27?1/42:1/62;
     feed(uniforms,inputs);
     const target=renderer.getRenderTarget();
     try {

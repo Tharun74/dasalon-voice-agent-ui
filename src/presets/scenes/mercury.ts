@@ -96,7 +96,7 @@ export function createScene(seed: number): BuiltScene {
   object.add(surface);
   return { object, update(inputs) {
     feed(uniforms, inputs);
-    uniforms.steps.value = inputs.motion.reducedMotion ? 36 : Math.round(34 + (inputs.quality ?? 1) * 22);
+    uniforms.steps.value = inputs.motion.reducedMotion ? 28 : inputs.tier === 'full' ? Math.round(34 + (inputs.quality ?? 1) * 22) : 32;
   } };
 }
 

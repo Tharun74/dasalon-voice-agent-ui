@@ -11,7 +11,7 @@ interface ComponentConfig {
   exportName: string;
   description: string;
   tags: Exclude<Category, 'All'>[];
-  docs: { summary: string; motion: string; finishes: [ThemeName, ThemeName] };
+  docs: { summary: string; motion: string; finishes: [ThemeName, ThemeName]; renderer?: 'Canvas2D' | 'WebGL'; props?: [string, string, string, string][] };
 }
 
 export const catalog: ComponentConfig[] = [
@@ -82,6 +82,31 @@ export const catalog: ComponentConfig[] = [
     variant: "silk-veil", slug: "silk-veil", name: "Silk Veil", exportName: "SilkVeil", tags: ["3D"],
     description: "A single satin sheet drapes, billows and catches anisotropic light.",
     docs: { summary: "A pinned satin sheet is solved on floating-point textures with Verlet integration and structural, shear and bending constraints. The pointer supplies wind.", motion: "Listening gathers the hanging sheet. Speaking sweeps wind toward the open edge. Move the pointer to billow the cloth.", finishes: ["champagne", "midnight-noir"] },
+  },
+  {
+    variant: "murmuration", slug: "murmuration", name: "Murmuration", exportName: "Murmuration", tags: ["3D","Particles"],
+    description: "A luminous flock of tiny winged silhouettes banks and reforms in three dimensions.",
+    docs: { summary: "Thousands of starlings trace an aerial ring, then gather into moving silhouettes.", motion: "Listening pulls the flock inward from user audio. Agent syllables send it outward through a sphere, wave, heart and spiral. Thinking banks the flock into a vortex.", finishes: ["rose-gold", "midnight-noir"] },
+  },
+  {
+    variant: "liquid-glass", slug: "liquid-glass", name: "Liquid Glass", exportName: "LiquidGlass", tags: ["3D","Compact","Minimal"],
+    description: "A transparent capsule bends the page beneath it and catches prismatic light.",
+    docs: { summary: 'A rim-lit lens distorts the live backdrop in browsers that support SVG backdrop filters. Other engines retain frosted glass and the chromatic rim.', motion: 'Listening contracts the lens from user audio. Agent syllables stretch it outward and run a ripple along its rim.', finishes: ['midnight-noir', 'emerald-spa'], props: [['floating', 'boolean', 'false', 'Pins the lens to the lower-right corner and enables backdrop distortion. Use the LiquidGlass export for this prop.']] },
+  },
+  {
+    variant: "muse", slug: "muse", name: "Muse", exportName: "Muse", tags: ["Minimal","Particles"],
+    description: "An expressive line-drawn presence with blinking eyes and a voice-shaped mouth.",
+    docs: { summary: "An abstract face drawn in projected lines and particles. RMS opens its mouth and spectral bands shape the vowel.", motion: "The face gathers inward and looks toward the user while listening. Agent speech opens the mouth and sends the surrounding particles outward.", finishes: ["champagne", "blush-pastel"], renderer: 'Canvas2D' },
+  },
+  {
+    variant: "jewel", slug: "jewel", name: "Jewel", exportName: "Jewel", tags: ["3D","Particles"],
+    description: "A suspended, faceted gem with chromatic caustics and a barge-in fracture.",
+    docs: { summary: "A custom-cut gemstone with procedural reflection, RGB refraction, facet highlights and a caustic below.", motion: "User input contracts the stone. Agent output expands it and carries bass through the facets, with treble on the glints. Barge-in separates the facets and then reforms the crystal.", finishes: ["midnight-noir", "champagne"] },
+  },
+  {
+    variant: "kinetic-type", slug: "kinetic-type", name: "Kinetic Type", exportName: "KineticType", tags: ["Minimal"],
+    description: "Live words slide into place, stretch with syllables and breathe in depth.",
+    docs: { summary: "A caption renderer with dimensional word layers, directional tracking and syllable-timed reveals.", motion: "User input draws tracking inward. Agent output opens the typesetting and lifts the word layers. The display reads captions directly from the adapter.", finishes: ["champagne", "emerald-spa"], renderer: 'Canvas2D' },
   },
 ];
 

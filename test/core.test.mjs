@@ -249,6 +249,14 @@ test('preview cadence preserves elapsed time and discards time spent in a hidden
   intersect(false);
   assert.equal(pending.size, 0);
   stop();
+
+  preference.matches = false;
+  let on144Hz = 0;
+  const stop144Hz = observeMotion({ ownerDocument: document }, () => { on144Hz++; }, () => 1000 / 60);
+  intersect(true);
+  for (let frame = 0; frame < 144; frame++) tick(2000 + frame * 1000 / 144);
+  assert.equal(on144Hz, 60);
+  stop144Hz();
 });
 
 test('visible presets share one frame request and unsubscribe independently', () => {

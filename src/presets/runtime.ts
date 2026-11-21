@@ -1,6 +1,8 @@
 import type { MotionFrame } from '../motion.js';
 import type { Color, Group, Object3D, WebGLRenderer } from 'three';
 import { smooth } from '../audio.js';
+import type { PresetQuality } from './catalog.js';
+import type { TranscriptEntry } from '../types.js';
 
 export interface Palette {
   glow: string;
@@ -13,6 +15,9 @@ export interface SceneInputs {
   intensity: number;
   palette: Palette;
   quality?: number;
+  tier?: PresetQuality;
+  aspect?: number;
+  transcript?: readonly TranscriptEntry[];
   dockOpen?: number;
 }
 
@@ -27,6 +32,7 @@ export interface SceneModule {
 }
 
 export type SceneLoader = () => Promise<SceneModule>;
+export type CanvasVisual = (seed: number) => (context: CanvasRenderingContext2D, width: number, height: number, inputs: SceneInputs, lightweight: boolean) => void;
 
 export function randomFor(seed: number) {
   let state = Math.trunc(seed) >>> 0;

@@ -2,6 +2,10 @@
 
 ## Done
 
+- Ink in Water now uses bounded onset-only dye doses, shrinking high-energy splats, a dye grid at twice the velocity resolution, clamped MacCormack transport, and stronger vorticity confinement. The display tone-maps density with headroom.
+- Added Murmuration, Liquid Glass, Muse, Jewel and Kinetic Type. Each ships with a separate package entry, gallery poster, component docs, and registry item. The gallery now has 17 presets.
+- Gallery and embedded previews use the preview quality tier, and the focused playground uses the full tier. Hold Shift+F or use the FPS button to display per-card frame timings.
+- Phase 4 verification passed the production build, 16 tests, and an actual shadcn install of all five new items in a separate TypeScript app. Hardware-accelerated Chrome on AMD Radeon measured all 17 previews at 60.0 FPS and 16.7 ms during simulated speaking in one 1440×2100 run with a single WebGL context. Ink in Water produced no near-opaque pixels at maximum intensity in its speech check.
 - Added Mercury, Aurora Veil, Ink in Water and Silk Veil. Each has a gallery poster, dedicated docs, a package export and a shadcn registry item. Ink uses a pressure-projected GPU fluid solver and Silk Veil uses GPU Verlet cloth. [Motion reviews](MOTION-REVIEWS.md)
 - Phase 3 verification passed the production build, all 16 tests, and shadcn resolution of the four items with their shared files. Chrome exercised all twelve live cards in one WebGL context, checked all ten changed component pages and verified the four animated Canvas2D fallbacks with reduced motion.
 - Migrated Mirror, Bloom, Prism Halo, Stardust, Dock Pill and Contour to the shared attention, directional and recoil cues. [Motion reviews](MOTION-REVIEWS.md)
@@ -23,7 +27,6 @@
 
 ## Next
 
-- Phase 4 adds Murmuration, Liquid Glass, Muse, Jewel and Kinetic Type.
 - Motion Phase 5 covers accessibility, performance and release verification for future presets.
 
 ## Decisions
@@ -32,6 +35,7 @@
 - The latest motion brief reopens the shared engine and preset choreography. Motion Phase 1 changes only the two reference scenes and shared runtime. The existing site layout is preserved.
 - Output compensation reads future buffered samples when available and uses bounded output prediction otherwise. The transport and shader phases run independently of the browser audio clock during frame stepping.
 - The gallery caps previews at 1× device-pixel ratio. WebGL previews share one context. Offscreen cards switch back to posters, and hidden tabs pause drawing.
+- Murmuration runs a WebGL2 texture simulation with up to 16,384 boids focused and 3,072 in the gallery. Liquid Glass uses native SVG backdrop displacement in compatible browsers. Muse and Kinetic Type use projected Canvas2D drawing.
 - Webpack resolves the frozen package’s Node-compatible `.js` specifiers to TS sources. The registry adjusts those specifiers in copied code for default Next consumer builds.
 - The speed control changes the demo conversation’s cadence. The original shader clocks and live audio rates are preserved.
 
@@ -39,7 +43,8 @@
 
 - The GitHub button opens repository search until `NEXT_PUBLIC_GITHUB_URL` is configured.
 - Provider examples were type-checked against the SDKs. Live provider sessions require credentials and were outside the browser test.
-- The reference pair measured 144 FPS at 6.9 ms in hardware-accelerated Chrome on AMD Radeon integrated graphics. The software WebGL run was slower. The other six presets and mobile hardware remain to be benchmarked.
+- The focused Lumen Orb and Silk Strands reached 144 FPS at 6.9 ms in hardware-accelerated Chrome on AMD Radeon integrated graphics. Focused performance for the other presets and mobile hardware remain to be benchmarked.
+- Liquid Glass uses frosted glass when SVG backdrop displacement is unavailable.
 
 ## Known issues (deferred)
 

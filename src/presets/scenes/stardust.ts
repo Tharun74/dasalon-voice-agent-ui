@@ -86,6 +86,7 @@ export function createScene(seed: number): BuiltScene {
     feed(uniforms, inputs);
     const { motion } = inputs;
     const { outward } = energy(inputs);
+    geometry.setDrawRange(0, inputs.tier === 'full' && !motion.reducedMotion ? count : 7200);
     const dt = motion.delta * (motion.reducedMotion ? 0.18 : 1);
     uniforms.spread.value = Math.max(0, spread.step(outward * 0.84, dt, 34, 8));
     tilt(particles, motion, 0.73 + Math.sin(motion.time * 0.43) * 0.15, 0.22, -0.34);

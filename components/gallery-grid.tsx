@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { PointerEvent } from 'react';
 import Link, { useLinkStatus } from 'next/link';
 import { ArrowUpRight, LoaderCircle, Play, Search, Square } from 'lucide-react';
@@ -25,15 +25,34 @@ function CardLinkIndicator() {
     : <ArrowUpRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />;
 }
 
-function GalleryTile({ item, demo, eagerPoster, prefetch }: {
+function GalleryTile({ item, demo, eagerPoster, prefetch, hud }: {
   item: CatalogEntry;
   demo: DemoAdapter;
   eagerPoster: boolean;
   prefetch: boolean;
+  hud: boolean;
 }) {
   const preview = useRef<HTMLDivElement>(null);
+  const timing = useRef<HTMLOutputElement>(null);
   const [live, setLive] = useState(false);
   const [intent, setIntent] = useState(false);
+  const telemetry = useMemo<MotionPlayback>(() => {
+    if (!hud) return previewMotion;
+    let elapsed = 0;
+    let frames = 0;
+    return { ...previewMotion, onFrame: (_frame, dt) => {
+      if (dt <= 0) return;
+      elapsed += dt;
+      frames++;
+      if (elapsed < .75 || !timing.current) return;
+      const fps = (frames / elapsed).toFixed(1);
+      const ms = (elapsed * 1000 / frames).toFixed(1);
+      timing.current.dataset.galleryFps = fps;
+      timing.current.dataset.galleryMs = ms;
+      timing.current.textContent = `${fps} FPS · ${ms} ms`;
+      elapsed = frames = 0;
+    } };
+  }, [hud]);
 
   useEffect(() => {
     const element = preview.current;
@@ -57,7 +76,9 @@ function GalleryTile({ item, demo, eagerPoster, prefetch }: {
     <Card className="spotlight group h-full gap-0 overflow-hidden rounded-xl border bg-card py-0 shadow-sm">
       <div ref={preview} className="voice-canvas poster-swap aspect-[1.55]" data-live-preview={live || undefined}>
         <PresetPoster variant={item.variant} eager={eagerPoster} />
-        {live ? <div className="absolute inset-0"><VoiceAgent variant={item.variant} adapter={demo} size="fill" interactive={false} motion={previewMotion} /></div> : null}
+        {live ? <div className="absolute inset-0"><VoiceAgent variant={item.variant} adapter={demo} size="fill" quality="preview" interactive={false} motion={telemetry} /></div> : null}
+        {hud && live ? <output ref={timing} aria-label="Preview frame rate and average frame time" aria-live="off"
+          className="pointer-events-none absolute top-2 right-2 z-10 rounded border border-white/15 bg-zinc-950/90 px-2 py-1 font-mono text-[10px] text-white empty:invisible" /> : null}
       </div>
       <div className="min-w-0 border-t px-4 py-4">
         <h3 className="text-sm font-semibold tracking-tight">
@@ -80,9 +101,33 @@ export function GalleryGrid({ filters = false, limit }: { filters?: boolean; lim
   const [query, setQuery] = useState('');
   const [demo] = useState(() => new DemoAdapter());
   const [playing, setPlaying] = useState(false);
+  const [holdHud, setHoldHud] = useState(false);
+  const [pinHud, setPinHud] = useState(false);
   const { state } = useSyncExternalStore(demo.subscribe, demo.getSnapshot, demo.getSnapshot);
 
   useEffect(() => () => demo.stop(), [demo]);
+  useEffect(() => {
+    if (!filters) return;
+    function start(event: KeyboardEvent) {
+      if (event.shiftKey && event.code === 'KeyF' && !event.repeat && !event.metaKey && !event.ctrlKey && !event.altKey &&
+        !(event.target instanceof HTMLElement && event.target.closest('input,textarea,[contenteditable="true"]'))) {
+        event.preventDefault();
+        setHoldHud(true);
+      }
+    }
+    function end(event: KeyboardEvent) {
+      if (event.code === 'KeyF' || !event.shiftKey) setHoldHud(false);
+    }
+    const reset = () => setHoldHud(false);
+    window.addEventListener('keydown', start);
+    window.addEventListener('keyup', end);
+    window.addEventListener('blur', reset);
+    return () => {
+      window.removeEventListener('keydown', start);
+      window.removeEventListener('keyup', end);
+      window.removeEventListener('blur', reset);
+    };
+  }, [filters]);
 
   const items = catalog.filter(item => {
     const terms = `${item.name} ${item.description} ${item.tags.join(' ')}`.toLowerCase();
@@ -104,6 +149,8 @@ export function GalleryGrid({ filters = false, limit }: { filters?: boolean; lim
           {playing ? 'Stop voice demo' : 'Play voice demo'}
         </Button>
         <span role="status" className="min-w-[5.5rem] text-xs text-muted-foreground">{state === 'idle' ? 'Idle' : STATE_LABELS[state]}</span>
+        <Button type="button" variant="ghost" size="sm" aria-pressed={pinHud} aria-keyshortcuts="Shift+F" title="Hold Shift+F to see frame timings"
+          className="text-xs" onClick={() => setPinHud(!pinHud)}>FPS</Button>
         <label className="flex h-9 min-w-32 flex-1 items-center gap-2 rounded-md border bg-card px-3 text-muted-foreground focus-within:border-ring sm:w-56 sm:flex-none">
           <Search aria-hidden="true" className="size-4 shrink-0" /><span className="sr-only">Search components</span>
           <input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search components…"
@@ -113,7 +160,7 @@ export function GalleryGrid({ filters = false, limit }: { filters?: boolean; lim
     </div> : null}
     {items.length ? <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {items.map((item, index) => <GalleryTile key={item.slug} item={item} demo={demo}
-        eagerPoster={filters && index === 0} prefetch={filters && index < 2} />)}
+        hud={holdHud || pinHud} eagerPoster={filters && index === 0} prefetch={filters && index < 2} />)}
     </div> : <p role="status" className="rounded-xl border border-dashed p-8 text-sm text-muted-foreground">No components match this search.</p>}
   </div>;
 }

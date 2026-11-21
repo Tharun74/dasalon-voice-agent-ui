@@ -87,7 +87,7 @@ export function createScene(seed: number): BuiltScene {
   object.add(curtain);
   return { object, update(inputs) {
     feed(uniforms, inputs);
-    uniforms.slices.value = inputs.motion.reducedMotion ? 25 : Math.round(24 + (inputs.quality ?? 1) * 20);
+    uniforms.slices.value = inputs.motion.reducedMotion ? 18 : inputs.tier === 'full' ? Math.round(24 + (inputs.quality ?? 1) * 20) : 24;
   } };
 }
 

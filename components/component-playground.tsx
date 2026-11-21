@@ -151,7 +151,7 @@ export function ComponentPlayground({ item }: { item: CatalogEntry }) {
             title="Reload animation" aria-label="Reload animation" onClick={() => setRevision(value => value + 1)}><RotateCcw className="size-4" /></Button>
           <div className="poster-swap relative grid min-h-[255px] flex-1 place-items-center sm:min-h-[340px]">
             <PresetPoster variant={item.variant} eager />
-            <VoiceAgent key={revision} variant={item.variant} adapter={adapter} theme={options.theme}
+            <VoiceAgent key={revision} variant={item.variant} adapter={adapter} theme={options.theme} quality="full"
               size={options.size} intensity={options.intensity} seed={options.seed} colors={options.colors} interactive={options.interactive} />
           </div>
           <div className="relative z-10 mx-2.5 mb-2.5 flex flex-wrap items-center gap-1.5 rounded-lg border bg-background/95 p-1.5 text-foreground shadow-lg sm:mx-auto sm:mb-3">
