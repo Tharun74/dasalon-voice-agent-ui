@@ -11,7 +11,7 @@ interface ComponentConfig {
   exportName: string;
   description: string;
   tags: Exclude<Category, 'All'>[];
-  docs: { summary: string; motion: string; finishes: [ThemeName, ThemeName]; renderer?: 'Canvas2D' | 'WebGL'; props?: [string, string, string, string][] };
+  docs: { summary: string; motion: string; finishes: [ThemeName, ThemeName]; renderer?: 'Canvas2D' | 'WebGL'; props?: [string, string, string, string][]; comparison?: string };
 }
 
 export const catalog: ComponentConfig[] = [
@@ -91,7 +91,10 @@ export const catalog: ComponentConfig[] = [
   {
     variant: "liquid-glass", slug: "liquid-glass", name: "Liquid Glass", exportName: "LiquidGlass", tags: ["3D","Compact","Minimal"],
     description: "A transparent capsule bends the page beneath it and catches prismatic light.",
-    docs: { summary: 'A rim-lit lens distorts the live backdrop in browsers that support SVG backdrop filters. Other engines retain frosted glass and the chromatic rim.', motion: 'Listening contracts the lens from user audio. Agent syllables stretch it outward and run a ripple along its rim.', finishes: ['midnight-noir', 'emerald-spa'], props: [['floating', 'boolean', 'false', 'Pins the lens to the lower-right corner and enables backdrop distortion. Use the LiquidGlass export for this prop.']] },
+    docs: { summary: 'One glass lens draws a frosted studio reflection or refracts an image, video, or canvas supplied as its backdrop.', motion: 'Listening contracts the lens from user audio. Agent syllables and pointer presses deform it through damped springs.', finishes: ['midnight-noir', 'emerald-spa'], props: [
+      ['floating', 'boolean', 'false', 'Pins the lens to the lower-right corner. Use the LiquidGlass export for this prop.'],
+      ['backdrop', 'HTMLImageElement | HTMLVideoElement | HTMLCanvasElement', 'Studio reflection', 'Pass a loaded same-origin or CORS-enabled media element for WebGL refraction.'],
+    ] },
   },
   {
     variant: "muse", slug: "muse", name: "Muse", exportName: "Muse", tags: ["Minimal","Particles"],
@@ -107,6 +110,22 @@ export const catalog: ComponentConfig[] = [
     variant: "kinetic-type", slug: "kinetic-type", name: "Kinetic Type", exportName: "KineticType", tags: ["Minimal"],
     description: "Live words slide into place, stretch with syllables and breathe in depth.",
     docs: { summary: "A caption renderer with dimensional word layers, directional tracking and syllable-timed reveals.", motion: "User input draws tracking inward. Agent output opens the typesetting and lifts the word layers. The display reads captions directly from the adapter.", finishes: ["champagne", "emerald-spa"], renderer: 'Canvas2D' },
+  },
+  {
+    variant: "glass-ribbon", slug: "glass-ribbon", name: "Glass Ribbon", exportName: "GlassRibbon", tags: ["3D","Compact"],
+    description: "A smoked glass lens holds a folded, voice-reactive spectrum.",
+    docs: {
+      summary: 'A supplied image, video or canvas becomes the refracted backdrop. The five finishes change the ribbon palette.',
+      motion: 'Listening narrows the seam from user input. Agent output opens the folded spectrum. The ref exposes play() and exit(). Reduced motion uses a static half-intensity ribbon.',
+      finishes: ['midnight-noir', 'emerald-spa'], comparison: '/lab/glass-ribbon-reference',
+      props: [
+        ['driver', '“live” | “synthetic” | “replay”', '“live” with adapter', 'Uses the shared audio engine, simulated speech, or the measured envelope. Synthetic is the default without an adapter.'],
+        ['backdrop', 'HTMLImageElement | HTMLVideoElement | HTMLCanvasElement', 'Dark glass', 'A loaded, same-origin or CORS-enabled media element to refract.'],
+        ['autoplay', 'boolean', 'true', 'Starts the entry timeline on mount.'],
+        ['entered', 'boolean', 'Uncontrolled', 'Toggles the entry and exit animation.'],
+        ['onEntered', '() => void', '—', 'Runs once when the entry completes.'],
+      ],
+    },
   },
 ];
 

@@ -46,11 +46,14 @@ function DockPanel({ adapter }: { adapter: VoiceAgentAdapter }) {
   );
 }
 
-function PresetSurface({ variant, load, draw, ...props }: PresetProps & { variant: PresetName; load?: LoadVisual; draw?: CanvasVisual }) {
+export function PresetSurface({ variant, load, draw, backdrop, ...props }: PresetProps & {
+  variant: PresetName; load?: LoadVisual; draw?: CanvasVisual; backdrop?: SceneInputs['backdrop'];
+}) {
   const { adapter, theme, size = 'md', quality: tier = 'preview', intensity = 1, seed = 42, colors, className, style, interactive = true, onPushToTalk, motion: playback } = props;
   const surface = useRef<HTMLCanvasElement>(null);
   const latest = useRef(renderSettings(variant, adapter, theme, colors, intensity, playback));
   const holding = useRef(false);
+  const media = useRef(backdrop);
   const dockTarget = useRef(false);
   const [motion] = useState(() => new MotionEngine(adapter, variant));
   const [open, setOpen] = useState(false);
@@ -58,6 +61,7 @@ function PresetSurface({ variant, load, draw, ...props }: PresetProps & { varian
 
   useEffect(() => { latest.current = renderSettings(variant, adapter, theme, colors, intensity, playback); },
     [variant, adapter, theme, intensity, colors, playback]);
+  useEffect(() => { media.current = backdrop; }, [backdrop]);
   useEffect(() => () => {
     if (!holding.current) return;
     holding.current = false;
@@ -134,12 +138,17 @@ function PresetSurface({ variant, load, draw, ...props }: PresetProps & { varian
         canvas.width = pixelWidth;
         canvas.height = pixelHeight;
       }
-      if (!delta && painted && scene === paintedScene && loadingScene === paintedWhileLoading && !resized && paintedSettings === current) return;
+      if (!delta && painted && scene === paintedScene && loadingScene === paintedWhileLoading && !resized && paintedSettings === current && inputs.backdrop === media.current) return;
       if (variant === 'dock' && delta) inputs.dockOpen = smooth(inputs.dockOpen ?? 0, dockTarget.current ? 1 : 0, delta, 0.10);
       inputs.motion = motion.sample(current.adapter, delta, reduced, current.tuning);
       inputs.intensity = current.intensity;
       inputs.palette = current.palette;
       inputs.aspect = pixelWidth / pixelHeight;
+      if (variant === 'liquid-glass') {
+        inputs.cssWidth = clientWidth;
+        inputs.cssHeight = clientHeight;
+        inputs.backdrop = media.current;
+      }
       if (draw) inputs.transcript = current.adapter.getSnapshot().transcript;
       inputs.quality = tier === 'preview' ? quality : Math.min(quality, Math.max(.58, Math.min(1, clientWidth / 460)));
       if (scene?.render(context, pixelWidth, pixelHeight, inputs)) {
@@ -191,13 +200,14 @@ function PresetSurface({ variant, load, draw, ...props }: PresetProps & { varian
         tabIndex={interactive ? 0 : undefined}
         aria-label={interactive ? variant === 'dock' ? 'Toggle voice concierge controls' : `Send a ripple through ${PRESETS[variant].name}` : undefined}
         aria-expanded={interactive && variant === 'dock' ? open : undefined}
-        onClick={interactive ? activate : undefined}
+        onClick={interactive ? event => { if (variant !== 'liquid-glass' || event.detail === 0) activate(); } : undefined}
         onKeyDown={interactive ? keyboard : undefined}
         onKeyUp={event => { if (event.key === ' ' || event.key === 'Enter') hold(false); }}
         onBlur={() => { motion.release(); hold(false); }}
         onPointerMove={point}
         onPointerDown={event => {
           point(event);
+          if (variant === 'liquid-glass' && interactive && event.button === 0) motion.pulse();
           if (onPushToTalk) event.currentTarget.setPointerCapture(event.pointerId);
           hold(true);
         }}
@@ -207,7 +217,8 @@ function PresetSurface({ variant, load, draw, ...props }: PresetProps & { varian
         onPointerCancel={() => { motion.release(); hold(false); }}
         style={{ position: 'absolute', inset: 0, cursor: interactive ? 'pointer' : undefined, borderRadius: 8 }}
       >
-        <canvas ref={surface} aria-hidden="true" style={{ height: '100%', width: '100%', display: 'block', pointerEvents: 'none' }} />
+        <canvas ref={surface} aria-hidden="true" data-liquid-glass-capsule={variant === 'liquid-glass' ? '' : undefined}
+          style={{ height: '100%', width: '100%', display: 'block', pointerEvents: 'none' }} />
       </div>
       {variant === 'dock' && interactive && open ? <DockPanel adapter={adapter} /> : null}
     </div>

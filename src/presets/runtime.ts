@@ -17,6 +17,9 @@ export interface SceneInputs {
   quality?: number;
   tier?: PresetQuality;
   aspect?: number;
+  backdrop?: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement;
+  cssWidth?: number;
+  cssHeight?: number;
   transcript?: readonly TranscriptEntry[];
   dockOpen?: number;
 }

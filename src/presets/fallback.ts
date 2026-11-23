@@ -54,34 +54,39 @@ export function fallbackRenderer(variant: PresetName, seed: number) {
         ctx.stroke();
       }
     } else if (variant === 'liquid-glass') {
-      const aspect = width / height;
-      const lensWidth = Math.min(width * .43, height * .7826) / scale;
-      const halfX = lensWidth * (1 - motion.features.inward * .22 + motion.features.outward * .18 + motion.features.recoil * .24);
-      const halfY = lensWidth / 3.3 * (1 - motion.features.inward * .15 + motion.features.outward * .12);
-      ctx.rotate(motion.x * -.035 + Math.sin(motion.phase * .84) * (.028 + outward * .039));
+      const lensWidth = Math.min(width * .407, height * .752) / scale;
+      const halfX = lensWidth * (1 - motion.features.inward * .22 + motion.features.outward * .18 + motion.features.recoil * .24 + motion.pulse * .14);
+      const halfY = lensWidth / 3.3 * (1 - motion.features.inward * .15 + motion.features.outward * .12 - motion.pulse * .19);
+      ctx.rotate(motion.x * -.035 + Math.sin(motion.phase * .84) * (.028 + outward * .039) + motion.pulse * .063);
       const shell = ctx.createLinearGradient(-halfX * .25, -halfY, halfX * .25, halfY);
-      shell.addColorStop(0, '#e0effeae');
-      shell.addColorStop(.16, '#adc1e556');
-      shell.addColorStop(.41, '#8ecdf625');
-      shell.addColorStop(.72, '#887fd12c');
-      shell.addColorStop(1, '#a799e2a8');
+      const source = inputs.backdrop;
+      const video = source?.tagName === 'VIDEO' ? source as HTMLVideoElement : undefined;
+      const img = source?.tagName === 'IMG' ? source as HTMLImageElement : undefined;
+      const mediaWidth = video?.videoWidth ?? img?.naturalWidth ?? source?.width ?? 0;
+      const mediaHeight = video?.videoHeight ?? img?.naturalHeight ?? source?.height ?? 0;
+      const mediaReady = !!source && mediaWidth > 0 && mediaHeight > 0 && (!video || video.readyState >= 2);
+      shell.addColorStop(0,'#e2f5ffbc'); shell.addColorStop(.18,mediaReady?'#adc7ee3f':'#536582bf');
+      shell.addColorStop(.52,mediaReady?'#779bc321':'#24263fcb'); shell.addColorStop(.78,mediaReady?'#887fd12c':'#465371b9');
+      shell.addColorStop(1,'#bfb1eb9a');
       ctx.beginPath();
       ctx.roundRect(-halfX, -halfY, halfX * 2, halfY * 2, halfY);
+      ctx.save();
+      ctx.clip();
+      if (mediaReady) {
+        const cover = Math.max(width / scale / mediaWidth, height / scale / mediaHeight) * 1.15;
+        ctx.filter = 'blur(10px) saturate(1.38)';
+        ctx.drawImage(source,-mediaWidth*cover*.5,-mediaHeight*cover*.5,mediaWidth*cover,mediaHeight*cover);
+        ctx.filter = 'none';
+      }
       ctx.fillStyle = shell;
       ctx.fill();
-      ctx.lineWidth = .85 + motion.features.rim * .39;
-      ctx.strokeStyle = palette.highlight;
-      ctx.globalAlpha = (.69 + motion.features.rim * .24) * (1 - quiet * .48);
+      ctx.restore();
+      const bevel = ctx.createLinearGradient(-halfX * .29,-halfY,halfX * .34,halfY);
+      bevel.addColorStop(0,'#e9f9ffe0');bevel.addColorStop(.43,palette.glow);bevel.addColorStop(1,'#9eabf391');
+      ctx.lineWidth = 1.35 + motion.features.rim * .38;
+      ctx.strokeStyle = bevel;
+      ctx.globalAlpha = (.76+motion.features.rim*.17)*(1-quiet*.48);
       ctx.stroke();
-      ctx.clip();
-      for (let line = 0; line < 4; line++) {
-        ctx.beginPath();
-        ctx.moveTo(-halfX, halfY * (.5 + line * .14));
-        ctx.bezierCurveTo(-halfX * .25, -halfY * (.38 + line * .23), halfX * .3, halfY * (.75 + outward), halfX, -halfY * .45);
-        ctx.strokeStyle = line < 2 ? palette.glow : '#bddeff';
-        ctx.globalAlpha = (.33 - line * .043) * Math.min(1, aspect);
-        ctx.stroke();
-      }
     } else if (variant === 'jewel') {
       const gleam = ctx.createLinearGradient(-63, -77, 71, 62);
       gleam.addColorStop(0, palette.highlight);
@@ -311,38 +316,63 @@ export function fallbackRenderer(variant: PresetName, seed: number) {
         ctx.fill();
         ctx.restore();
       }
-    } else if (variant === 'silk' || variant === 'contour') {
-      ctx.rotate(variant === 'silk' ? -0.28 + Math.sin(phase * 0.67) * 0.07 : 0.28);
-      for (let strand = 0; strand < 17; strand++) {
-        const separation = variant === 'silk' ? 1 - inward * .55 + outward * .28 : 1;
-        const shift = (strand - 8) * 3.7 * separation;
-        ctx.lineWidth = variant === 'contour' ? 3.25 : 2.1;
+    } else if (variant === 'silk') {
+      ctx.rotate(.13);
+      const bundles=lightweight?20:32;
+      for(let strand=0;strand<bundles;strand++){
+        const lane=strand*2/(bundles-1)-1;
+        const draw=(1-.46*inward+.18*outward);
+        const wash=ctx.createLinearGradient(-117,-28,118,29);
+        wash.addColorStop(0,'transparent');wash.addColorStop(.17,palette.shadow);
+        wash.addColorStop(.40+lane*.045,palette.highlight);wash.addColorStop(.66,palette.glow);
+        wash.addColorStop(.89,palette.shadow);wash.addColorStop(1,'transparent');
+        ctx.strokeStyle=wash;
+        ctx.lineWidth=2.9;
         ctx.beginPath();
-        if (variant === 'silk') {
-          ctx.moveTo(-119, -30 + shift * 0.8);
-          const fold = outward * Math.sin(phase * 3.6 - strand * 0.15) + motion.features.recoil * 7;
-          ctx.bezierCurveTo(-53, -70 + shift, -30, 58 - shift * aperture, 20, 34 + shift * 0.7 + fold * 9);
-          ctx.bezierCurveTo(59, 6 + shift + listen * 12, 83, -45 + shift, 120, -48 + shift * 0.55);
-        } else {
-          const steps = lightweight ? 48 : 96;
-          for (let j = 0; j <= steps; j++) {
-            const a = j * TAU / steps;
-            const radius = (71 + shift * 0.5 + Math.sin(a * 3 + phase * 0.45) * (19 + speak * 13)) * aperture;
-            const x = radius * Math.cos(a);
-            const y = radius * Math.sin(a) * 0.77 + Math.cos(a * 2) * shift * 0.5;
-            if (!j) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-          }
-          ctx.closePath();
+        for(let i=0;i<=36;i++){
+          const u=i/36, p=6.06*u-motion.phase*1.44+lane*.41-.76;
+          const y=lane*(.46+.12*Math.sin(Math.PI*u))*54*draw
+            +(21+outward*7)*Math.sin(p)+6*Math.sin(u*3.16-motion.phase*.73-lane*.20+1.04)+(u-.5)*12;
+          if(i===0)ctx.moveTo((u-.5)*238,y);else ctx.lineTo((u-.5)*238,y);
         }
-        if (variant === 'silk' && (strand === 0 || strand === 16) && motion.features.rim > 0) {
-          ctx.strokeStyle = palette.highlight;
-          ctx.globalAlpha = 0.45 + motion.features.rim * 0.35;
-          ctx.stroke();
-          ctx.strokeStyle = light;
-          ctx.globalAlpha = 1 - quiet * 0.48;
-        } else ctx.stroke();
+        ctx.stroke();
       }
+    } else if (variant === 'contour') {
+      ctx.rotate(.28);
+      for (let strand = 0; strand < 17; strand++) {
+        const shift = (strand - 8) * 3.7;
+        ctx.lineWidth = 3.25;
+        ctx.beginPath();
+        const steps = lightweight ? 48 : 96;
+        for (let j = 0; j <= steps; j++) {
+          const a = j * TAU / steps;
+          const radius = (71 + shift * 0.5 + Math.sin(a * 3 + phase * 0.45) * (19 + speak * 13)) * aperture;
+          const x = radius * Math.cos(a);
+          const y = radius * Math.sin(a) * 0.77 + Math.cos(a * 2) * shift * 0.5;
+          if (!j) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+    } else if (variant === 'lumen') {
+      const radius = 73 * (1 + breath * .38 - inward * .036 + outward * .024 + motion.features.recoil * .067);
+      const shell = ctx.createRadialGradient(-radius*.29,-radius*.31,radius*.04,0,0,radius*1.07);
+      shell.addColorStop(0,'#455269'); shell.addColorStop(.54,'#1e2034'); shell.addColorStop(.84,'#131522'); shell.addColorStop(1,'#745f82');
+      ctx.beginPath();ctx.arc(0,0,radius,0,TAU);
+      ctx.fillStyle=shell;ctx.fill();ctx.clip();
+      const x=Math.sin(motion.phase*.73)*8+motion.x*7, y=11+Math.cos(motion.phase*.88)*5+motion.y*5;
+      const span=radius*(.47+outward*.25-inward*.25);
+      const core=ctx.createRadialGradient(x,y,0,x,y,span);
+      core.addColorStop(0,'#fff1f0');core.addColorStop(.25,inward>.08?'#8ed6ff':palette.highlight);
+      core.addColorStop(.53,palette.glow);core.addColorStop(1,'transparent');
+      ctx.globalAlpha=(.82+outward*.18)*(1-quiet*.52);ctx.fillStyle=core;ctx.fillRect(-radius,-radius,radius*2,radius*2);
+      const box=ctx.createRadialGradient(-radius*.43,-radius*.48,0,-radius*.43,-radius*.48,radius*.42);
+      box.addColorStop(0,'#fffcf8f1');box.addColorStop(.42,'#c3d7ffa0');box.addColorStop(1,'transparent');
+      ctx.fillStyle=box;ctx.fillRect(-radius,-radius,radius*2,radius*2);
+      const rim=ctx.createLinearGradient(-radius,-radius,radius,radius);
+      rim.addColorStop(0,'#a9d6fc');rim.addColorStop(.44,'#ad8ad3');rim.addColorStop(1,palette.highlight);
+      ctx.beginPath();ctx.arc(0,0,radius-.85,0,TAU);ctx.lineWidth=1.8+motion.features.rim*.5;ctx.strokeStyle=rim;ctx.stroke();
     } else {
       const radius = (variant === 'mirror' ? 72 : 68) * aperture;
       ctx.shadowBlur = lightweight ? 0 : 22 + outward * 8;

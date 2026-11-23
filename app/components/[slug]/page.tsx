@@ -117,6 +117,7 @@ export default async function ComponentPage({ params }: Route) {
           <p><strong className="text-foreground">Performance.</strong> {canvas ? 'This preset uses Canvas2D and pauses outside the viewport.' : 'The renderer loads on the client, pauses outside the viewport and falls back to Canvas2D when WebGL is unavailable.'}</p>
           <p><strong className="text-foreground">Accessibility.</strong> Use Enter or Space to pulse the visual. Reduced motion slows the animation and reduces movement. Your app should provide spoken-state labels and transcripts.</p>
           <p><strong className="text-foreground">SSR.</strong> Import the component from a client boundary when you create a browser adapter. The initial markup can render on the server.</p>
+          {item.docs.comparison ? <p><Link href={item.docs.comparison} className="font-medium text-foreground underline underline-offset-4">Open the frame comparison lab</Link></p> : null}
           <Link href={`/lab?preset=${item.variant}`} prefetch={false} className="inline-flex items-center gap-1.5 font-medium text-foreground hover:underline">Tune this preset in the Audio Lab <ArrowRight aria-hidden="true" className="size-3.5" /></Link>
         </div>
       </Section>

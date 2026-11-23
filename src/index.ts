@@ -25,3 +25,5 @@ export type { LiquidGlassProps } from './presets/liquid-glass.js';
 export { Muse } from './presets/muse.js';
 export { Jewel } from './presets/jewel.js';
 export { KineticType } from './presets/kinetic-type.js';
+export { GlassRibbon } from './presets/glass-ribbon.js';
+export type { GlassRibbonBackdrop, GlassRibbonDriver, GlassRibbonHandle, GlassRibbonProps } from './presets/glass-ribbon.js';

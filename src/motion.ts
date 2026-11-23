@@ -15,10 +15,12 @@ export const DEFAULT_MOTION_TUNING: MotionTuning = { ...DEFAULT_AUDIO_TUNING, st
 export const MOTION_PROFILES: Readonly<Partial<Record<PresetName, MotionTuning>>> = {
   lumen: { attack: 0.022, release: 0.235, stiffness: 315, damping: 22, gain: 1.06, latency: 38 },
   silk: { attack: 0.036, release: 0.315, stiffness: 220, damping: 27, gain: 1.03, latency: 40 },
+  'glass-ribbon': { attack: .040, release: .200, stiffness: 258, damping: 24, gain: 1, latency: 38 },
 };
 
 /** Idle period in seconds and a normalized amplitude for each preset. */
 export const IDLE_RHYTHMS: Readonly<Record<PresetName, readonly [period: number, amplitude: number]>> = {
+  "glass-ribbon": [4.76, .51],
   "kinetic-type": [10.2, .49],
   "jewel": [8.95, .64],
   "muse": [6.55, .57],

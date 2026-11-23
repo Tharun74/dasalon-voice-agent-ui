@@ -501,6 +501,43 @@
         }
       ],
       "docs": "Import KineticType from the installed voicekit/presets/kinetic-type module."
+    },
+    {
+      "name": "glass-ribbon",
+      "type": "registry:ui",
+      "title": "Glass Ribbon",
+      "description": "A smoked glass lens holds a folded, voice-reactive spectrum.",
+      "registryDependencies": [
+        "http://localhost:3000/r/voicekit-core.json"
+      ],
+      "files": [
+        {
+          "path": "src/presets/glass-ribbon.tsx",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/glass-ribbon.tsx"
+        },
+        {
+          "path": "src/presets/scenes/glass-ribbon.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/scenes/glass-ribbon.ts"
+        },
+        {
+          "path": "src/presets/glass-ribbon-canvas.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/glass-ribbon-canvas.ts"
+        },
+        {
+          "path": "src/presets/glass-ribbon-timeline.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/glass-ribbon-timeline.ts"
+        },
+        {
+          "path": "src/presets/glass-ribbon-envelope.ts",
+          "type": "registry:file",
+          "target": "@components/voicekit/presets/glass-ribbon-envelope.ts"
+        }
+      ],
+      "docs": "Import GlassRibbon from the installed voicekit/presets/glass-ribbon module."
     }
   ]
 }

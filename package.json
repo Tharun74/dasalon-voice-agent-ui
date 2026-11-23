@@ -88,15 +88,20 @@
     "./kinetic-type": {
       "types": "./dist/presets/kinetic-type.d.ts",
       "import": "./dist/presets/kinetic-type.js"
+    },
+    "./glass-ribbon": {
+      "types": "./dist/presets/glass-ribbon.d.ts",
+      "import": "./dist/presets/glass-ribbon.js"
     }
   },
   "scripts": {
-    "predev": "npm run registry:build",
+    "predev": "npm run registry:build && npm run reference:frames",
     "dev": "next dev --webpack",
     "typecheck": "tsc --noEmit",
     "build:library": "tsc -p tsconfig.build.json",
     "registry:build": "node scripts/registry.mjs",
-    "prebuild": "npm run registry:build",
+    "reference:frames": "node scripts/reference-frames.mjs",
+    "prebuild": "npm run registry:build && npm run reference:frames",
     "build": "npm run build:library && next build --webpack",
     "prepack": "npm run build:library",
     "test": "npm run build:library && node --test"

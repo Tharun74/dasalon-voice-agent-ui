@@ -1,0 +1,16 @@
+{
+  "preview": {
+    "cpuP95Ms": 0.5,
+    "fps": 60,
+    "frameP95Ms": 20.9,
+    "samples": 125,
+    "renderer": "webgl"
+  },
+  "full": {
+    "cpuP95Ms": 0.5,
+    "fps": 60,
+    "frameP95Ms": 20.9,
+    "samples": 125,
+    "renderer": "webgl"
+  }
+}

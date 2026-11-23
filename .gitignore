@@ -9,6 +9,7 @@ playground-dist/
 next-env.d.ts
 *.tsbuildinfo
 public/r/
+public/ref-frames/
 .voicekit-registry.build.json
 *.local
 *.tgz

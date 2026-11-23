@@ -17,9 +17,11 @@ import { LiquidGlass } from './presets/liquid-glass.js';
 import { Muse } from './presets/muse.js';
 import { Jewel } from './presets/jewel.js';
 import { KineticType } from './presets/kinetic-type.js';
+import { GlassRibbon } from './presets/glass-ribbon.js';
 import type { VoiceAgentProps } from './presets/catalog.js';
 
 const components = {
+  "glass-ribbon": GlassRibbon,
   "kinetic-type": KineticType,
   "jewel": Jewel,
   "muse": Muse,

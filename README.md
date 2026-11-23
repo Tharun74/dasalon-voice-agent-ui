@@ -83,7 +83,11 @@ All presets take `adapter`, `theme`, `size`, `intensity`, `seed` and optional `c
 
 `quality="preview"` is the default for compact and embedded previews. Set `quality="full"` for a single focused visual. In the gallery, hold Shift+F or toggle **FPS** to see per-card render cadence and average frame time. Offscreen cards show their poster.
 
-Use `<LiquidGlass adapter={adapter} floating />` for a corner widget that refracts its page backdrop. Browsers that lack SVG backdrop filtering render frosted glass with a prismatic rim. `KineticType` reads the latest caption from the adapter and announces finalized captions when interactive.
+Use `<LiquidGlass adapter={adapter} floating backdrop={media} />` for a corner lens that refracts a loaded, origin-clean image, video, or canvas. Without a media element, the lens uses a procedural studio reflection. `KineticType` reads the latest caption from the adapter and announces finalized captions when interactive.
+
+Glass Ribbon is a smoked glass lens. Use `<GlassRibbon driver="synthetic" />` to try it without a provider. Pass a loaded `HTMLImageElement`, `HTMLVideoElement`, or `HTMLCanvasElement` as `backdrop` for refraction. The media must be same-origin or allow cross-origin texture access. A `GlassRibbonHandle` ref exposes `play()` and `exit()`.
+
+The local comparison at `/lab/glass-ribbon-reference` reads source frames extracted by `npm run reference:frames -- "path-to-video.mp4"`. Set `VOICEKIT_REFERENCE_VIDEO` to extract during `npm run dev` or `npm run build`. The original video and extracted frames are excluded from the repository and the package.
 
 - `DemoAdapter` supplies a scripted conversation, separate simulated voices, and transcripts without a backend.
 - `MicAdapter` captures real microphone input. Call `start()` on a user gesture on HTTPS or localhost, and call `stop()` when you finish.

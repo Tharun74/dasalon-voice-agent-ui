@@ -1,123 +1,142 @@
-import { BufferAttribute, BufferGeometry, DoubleSide, Group, Mesh, PlaneGeometry, ShaderMaterial } from 'three';
-import { randomFor, tilt } from '../runtime.js';
+import { BufferAttribute, BufferGeometry, DoubleSide, Group, Mesh, ShaderMaterial } from 'three';
+import { DampedSpring } from '../../motion.js';
+import { tilt } from '../runtime.js';
 import { aura, feed, PARAMS, uniformsFor } from './shading.js';
 import type { BuiltScene } from '../runtime.js';
 
-function ribbons(seed: number) {
-  const random = randomFor(seed);
-  const strands = 198;
-  const sections = 40;
-  const configuration = new Float32Array(strands * (sections + 1) * 2 * 3);
-  const offsets = new Float32Array(strands * (sections + 1) * 2);
-  const faces = new Uint16Array(strands * sections * 6);
-  let face = 0;
-  for (let strand = 0; strand < strands; strand++) {
-    const thickness = 0.56 + random() * 0.74;
-    const root = (strand / (strands - 1) - 0.5) * 2;
-    for (let s = 0; s <= sections; s++) {
-      const index = (strand * (sections + 1) + s) * 2;
-      for (let edge = 0; edge < 2; edge++) {
-        const vertex = index + edge;
-        configuration[vertex * 3] = s / sections;
-        configuration[vertex * 3 + 1] = root;
-        configuration[vertex * 3 + 2] = edge * 2 - 1;
-        offsets[vertex] = thickness;
-      }
-      if (s < sections) {
-        faces[face++] = index;
-        faces[face++] = index + 1;
-        faces[face++] = index + 2;
-        faces[face++] = index + 1;
-        faces[face++] = index + 3;
-        faces[face++] = index + 2;
+const STRANDS = 180;
+
+function ribbons(sections: number) {
+  const configuration = new Float32Array(STRANDS * (sections+1) * 6);
+  const faces = new Uint16Array(STRANDS * sections * 6);
+  let vertex = 0, face = 0;
+  for(let strand=0;strand<STRANDS;strand++){
+    const lane=(strand+.5)*2/STRANDS-1;
+    for(let s=0;s<=sections;s++){
+      const top=vertex/3;
+      configuration[vertex++]=s/sections; configuration[vertex++]=lane; configuration[vertex++]=-1;
+      configuration[vertex++]=s/sections; configuration[vertex++]=lane; configuration[vertex++]=1;
+      if(s<sections){
+        faces[face++]=top; faces[face++]=top+1; faces[face++]=top+2;
+        faces[face++]=top+1; faces[face++]=top+3; faces[face++]=top+2;
       }
     }
   }
-  const geometry = new BufferGeometry();
-  geometry.setAttribute('position', new BufferAttribute(configuration, 3));
-  geometry.setAttribute('thread', new BufferAttribute(offsets, 1));
-  geometry.setIndex(new BufferAttribute(faces, 1));
+  const geometry=new BufferGeometry();
+  geometry.setAttribute('position',new BufferAttribute(configuration,3));
+  geometry.setIndex(new BufferAttribute(faces,1));
   return geometry;
 }
 
-const vertex = `
+const vertex=`
   ${PARAMS}
-  attribute float thread;
-  varying float u, lane, edge, fall, gloss;
-  float ripple(float position, float age) {
-    if (age > 1.2) return 0.0;
-    float relative = position - 1.85 * age;
-    return sin(relative * 10.0) * exp(-15.0 * relative * relative - age * 2.1) * smoothstep(0.0, 0.085, age);
+  uniform float phaseAdvance, waveLift, rowWidth;
+  varying vec3 T,N,V;
+  varying vec4 fiber;
+  varying float viewDepth;
+
+  vec2 curl(vec2 p) {
+    // Take the curl of a seeded, low-frequency scalar sine field.
+    vec2 q=p*vec2(3.9,.62)+vec2(seedKey,phaseAdvance*.61);
+    return vec2(.62*sin(q.x)*cos(q.y),-3.9*cos(q.x)*sin(q.y));
   }
+
+  vec3 centerline(float u,float lane) {
+    float x=(u-.5)*3.61;
+    float roll = lane + .014*sin(lane*9.424778);
+    float mouth = sin(3.141593*u);
+    float shoulder = .46 + .12*mouth;
+    float taper = .56+.44*smoothstep(.0,.22,min(u,1.0-u));
+    float draw = shoulder*taper*(1.0-.46*intake+.18*release);
+    float p = u*6.06 - phaseAdvance*1.44 + roll*.41 - .76;
+    float q = u*3.16 - phaseAdvance*.73 - roll*.20 + 1.04;
+    float r = u*8.83 - phaseAdvance*1.91 + roll*.29 + .19;
+    vec2 turbulence=curl(vec2(u,lane));
+    float y = roll*draw + (0.34+waveLift*.18)*sin(p) + .115*sin(q) + .047*sin(r);
+    y += (u-.5)*.22 + turbulence.x*.023 + breath*.020;
+    float z = .30*cos(p) + .10*cos(q) + .056*cos(r) + roll*taper*.18;
+    z += turbulence.y*.010 + .10*waveLift*sin(p+.53);
+    y += springBack*mouth*.14;
+    z += pulse*mouth*.09;
+    return vec3(x,y,z);
+  }
+
   void main() {
-    u = position.x; lane = position.y; edge = position.z;
-    float taper = pow(max(0.001, sin(u * 3.14159)), 0.42);
-    float crease = sin(u * 9.2 + lane * 1.7 + clock * 0.39);
-    float delayed = u + lane * 0.043;
-    float packets = ripple(delayed, beatAges.x) * beatStrengths.x + ripple(delayed, beatAges.y) * beatStrengths.y
-      + ripple(delayed, beatAges.z) * beatStrengths.z;
-    packets /= 1.0 + 0.65 * abs(packets);
-    float rootAnchor = smoothstep(0.04, 0.33, u);
-    float wave = (packets * release * 0.47 + sin(u * 10.0 - motionPhase * 4.8 + lane * 0.48) * bodyWeight * 0.53)
-      * taper * rootAnchor;
-    float draw = 1.0 - intake * (0.55 + taper * 0.24) + release * (0.09 + 0.09 * u);
-    float width = (0.32 + 0.28 * taper) * draw;
-    float px = (u - 0.5) * 3.45 + lane * 0.28 * cos(u * 2.2);
-    float py = 0.51 * sin(u * 7.05 - 0.83) + (u - 0.5) * 0.32;
-    py += lane * width + (0.21 - intake * 0.115) * crease + wave * 0.36 + breath * 0.025 * taper;
-    py += sin(u * 9.0 + lane * 3.0 + clock * 2.2) * (thought * 0.11 + connect * 0.052);
-    py += springBack * rootAnchor * 0.29;
-    float pz = 0.36 * cos(u * 7.0 + lane * 2.4 + clock * 0.63) + lane * 0.25;
-    pz += wave * 0.21 + pulse * 0.15 * taper - intake * lane * 0.095;
-    py += edge * thread * (0.0023 + 0.0051 * taper);
-    gloss = 0.5 + 0.5 * sin(u * 9.8 + lane * 3.7 + motionPhase * 1.14 + pointer.x * 0.7 + seedKey * 0.3);
-    fall = smoothstep(0.0, 0.19, u) * (1.0 - smoothstep(0.79, 1.0, u));
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(px, py, pz, 1.0);
+    float u=position.x, lane=position.y, side=position.z;
+    float v=lane+side*rowWidth;
+    vec3 point=centerline(u,v);
+    vec3 du=centerline(u+.004,v)-point;
+    vec3 dv=centerline(u,v+.006)-point;
+    vec4 pos=modelViewMatrix*vec4(point,1.0);
+    T=normalize(normalMatrix*du);
+    N=normalize(normalMatrix*cross(du,dv));
+    V=-pos.xyz;
+    viewDepth=pos.z;
+    fiber=vec4(u,v,side,lane);
+    gl_Position=projectionMatrix*pos;
   }
 `;
 
-const fragment = `
+const fragment=`
   ${PARAMS}
-  uniform float layerOpacity;
-  varying float u, lane, edge, fall, gloss;
+  varying vec3 T,N,V;
+  varying vec4 fiber;
+  varying float viewDepth;
+
+  float satin(vec3 t,vec3 normal,vec3 view,vec3 lamp,float power) {
+    vec3 halfway=normalize(lamp+view);
+    float axis=dot(t,halfway);
+    return pow(sqrt(max(0.0,1.0-axis*axis)),power)*(.22+.78*max(0.0,dot(normal,halfway)));
+  }
+
   void main() {
-    float streak = pow(gloss, 5.0);
-    float secondary = pow(0.5 + 0.5 * cos(u * 14.0 - lane + clock * 0.57), 9.0);
-    float dye = 0.5 + 0.5 * sin(lane * 17.0 + u * 6.3);
-    vec3 copper = mix(shade * 0.38 + vec3(0.10,0.037,0.019), glow, 0.23 + 0.35 * dye);
-    vec3 color = copper * (0.32 + secondary * 0.54 + spectralSheen * 0.11) + foil * streak * (0.43 + sparkle * 0.25);
-    color += foil * intake * pow(1.0 - abs(lane), 3.0) * 0.13;
-    color += foil * listenRim * smoothstep(0.79, 1.0, abs(lane)) * 0.19;
-    color += (1.0 - abs(edge)) * vec3(0.075,0.028,0.012) + foil * 0.075;
-    float feather = clamp(fwidth(edge), 0.18, 1.0);
-    float coverage = 1.0 - smoothstep(1.0 - feather, 1.0, abs(edge));
-    float opacity = fall * (0.55 + 0.45 * dye) * coverage * layerOpacity;
-    gl_FragColor = vec4(color * (1.0 - quiet * 0.58), opacity);
+    float u=fiber.x,lane=fiber.y,edge=fiber.z;
+    vec3 view=normalize(V), along=normalize(T);
+    vec3 normal=normalize(N)*(gl_FrontFacing?1.0:-1.0);
+    vec3 softbox=normalize(vec3(-.46,.74,.70));
+    vec3 bounce=normalize(vec3(.88,-.43,.48));
+    float key=satin(along,normal,view,softbox,24.0);
+    float fill=satin(along,normal,view,bounce,51.0);
+    float wrapped=clamp(dot(softbox,normal)*.54+.46,.0,1.0);
+    float shift=.5+.5*sin(lane*10.9+.24);
+    float bundle=.63+.37*smoothstep(-.85,.80,cos(lane*6.6-u*.95));
+    float resolution=1.0-smoothstep(.63,1.35,fwidth(edge));
+    float crossThread=(1.0-abs(edge))*.23*resolution;
+    vec3 copper=mix(shade*.54+vec3(.11,.045,.026),glow,.29+shift*.24);
+    vec3 color=copper*(.20+wrapped*.63)*bundle;
+    color+=foil*(key*.77+fill*.24+crossThread + .16*spectralSheen);
+    color+=vec3(.28,.14,.064)*fill*.31;
+    float border=exp(-pow((1.0-abs(lane))*6.6,2.0));
+    color+=foil*border*listenRim*.24;
+    float softDepth=smoothstep(-6.20,-4.45,viewDepth);
+    color*=.72+softDepth*.28;
+    float feather=smoothstep(.0,.17,u)*smoothstep(.0,.17,1.0-u);
+    float edgeFade=1.0-smoothstep(.87,1.0,abs(lane));
+    gl_FragColor=vec4(color*(1.0-quiet*.60),clamp(feather*edgeFade,0.0,1.0));
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }
 `;
 
 export function createScene(seed: number): BuiltScene {
-  const uniforms = uniformsFor(seed);
-  const object = new Group();
-  const silk = new Group();
-  const backing = new PlaneGeometry(1, 2, 40, 68).translate(0.5, 0, 0);
-  backing.setAttribute('thread', new BufferAttribute(new Float32Array(backing.attributes.position.count), 1));
-  // The matching satin surface keeps subpixel gaps between strands from flickering against the background.
-  for (const [geometry, layerOpacity, order] of [[backing, 0.91, 0], [ribbons(seed), 0.40, 1]] as const) {
-    const surface = new Mesh(geometry, new ShaderMaterial({
-      uniforms: { ...uniforms, layerOpacity: { value: layerOpacity } }, vertexShader: vertex, fragmentShader: fragment,
-      side: DoubleSide, transparent: true, depthWrite: false,
-    }));
-    surface.frustumCulled = false;
-    surface.renderOrder = order;
-    silk.add(surface);
-  }
-  object.add(aura(uniforms, 4.7, 3, 0.49), silk);
-  return { object, update(inputs) {
-    feed(uniforms, inputs);
-    const { motion } = inputs;
-    tilt(silk, motion, -0.20 - uniforms.intake.value * 0.16, Math.sin(motion.time * 0.51) * 0.12, 0.19 + motion.features.recoil * 0.16);
-  } };
+  const uniforms={ ...uniformsFor(seed), phaseAdvance:{value:0}, waveLift:{value:0}, rowWidth:{value:1/STRANDS} };
+  const object=new Group();
+  const preview=ribbons(24), full=ribbons(34);
+  const cloth=new Mesh(preview,new ShaderMaterial({uniforms,vertexShader:vertex,fragmentShader:fragment,
+    side:DoubleSide,transparent:true,depthWrite:false}));
+  cloth.frustumCulled=false;
+  object.add(aura(uniforms,4.7,3.0,.55),cloth);
+  const amplitude=new DampedSpring(), speed=new DampedSpring(.62);
+  return { object, update(inputs){
+    feed(uniforms,inputs);
+    const {motion}=inputs;
+    const dt=motion.delta*(motion.reducedMotion?.34:1);
+    cloth.geometry=inputs.tier==='full'?full:preview;
+    uniforms.waveLift.value=amplitude.step(Math.max(0,.53*uniforms.release.value+.24*uniforms.bodyWeight.value),dt,67,15);
+    uniforms.phaseAdvance.value+=speed.step(.62+uniforms.release.value*.75-uniforms.intake.value*.13+uniforms.thought.value*.14,dt,51,14)*dt;
+    tilt(cloth,motion,-.15-uniforms.intake.value*.10,Math.sin(motion.time*.39)*.080,.15+motion.features.recoil*.091);
+  },dispose(){
+    // The scene host disposes the mesh's current geometry.
+    (cloth.geometry===preview?full:preview).dispose();
+  }};
 }

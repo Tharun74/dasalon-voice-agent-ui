@@ -2,6 +2,9 @@
 
 ## Done
 
+- Completed Fix Pass Batch A for Lumen Orb, Silk Strands, Glass Ribbon and Liquid Glass. The [review](docs/fixes/BATCH-A.md) links all before-and-after sheets and 0.25× speaking strips and records the preview/full CPU numbers. All measured tier pairs held 60 FPS.
+- Added Glass Ribbon as the 18th preset. It has one lens form, live and synthetic audio, measured-envelope replay, WebGL refraction, and a Canvas2D fallback. The local reference lab compares 261 frames and exports measurements. Source frames are generated locally from the supplied video and ignored by Git.
+- Verified Glass Ribbon rendering in Chromium, Firefox and WebKit, plus Canvas2D with reduced motion. The original lens measured 0.5079 mean SSIM on entry frames 14–59 and 0.3930 on frames 60–239. All five authored entry cues were within one frame of the annotations.
 - Ink in Water now uses bounded onset-only dye doses, shrinking high-energy splats, a dye grid at twice the velocity resolution, clamped MacCormack transport, and stronger vorticity confinement. The display tone-maps density with headroom.
 - Added Murmuration, Liquid Glass, Muse, Jewel and Kinetic Type. Each ships with a separate package entry, gallery poster, component docs, and registry item. The gallery now has 17 presets.
 - Gallery and embedded previews use the preview quality tier, and the focused playground uses the full tier. Hold Shift+F or use the FPS button to display per-card frame timings.
@@ -27,10 +30,12 @@
 
 ## Next
 
+- Fix Pass Batch B awaits confirmation. Order is Mirror, Bloom, Stardust and Prism Halo.
 - Motion Phase 5 covers accessibility, performance and release verification for future presets.
 
 ## Decisions
 
+- Liquid Glass passes optional backdrop media through the existing preset surface to its single WebGL scene. The shared audio-motion engine is unchanged by Fix Pass Batch A.
 - Audio Lab uploads measure RMS across channels before calculating the spectrum from the strongest channel in the analysis window. This avoids phase cancellation while keeping one FFT per signal sample.
 - The latest motion brief reopens the shared engine and preset choreography. Motion Phase 1 changes only the two reference scenes and shared runtime. The existing site layout is preserved.
 - Output compensation reads future buffered samples when available and uses bounded output prediction otherwise. The transport and shader phases run independently of the browser audio clock during frame stepping.

@@ -21,6 +21,7 @@ export const PRESETS = {
   "muse": { name: "Muse", component: "Muse", description: "An expressive line-drawn presence with blinking eyes and a voice-shaped mouth.", accent: "#e3b5a4" },
   "jewel": { name: "Jewel", component: "Jewel", description: "A suspended, faceted gem with chromatic caustics and a barge-in fracture.", accent: "#c499ed" },
   "kinetic-type": { name: "Kinetic Type", component: "KineticType", description: "Live words slide into place, stretch with syllables and breathe in depth.", accent: "#fdd6a3" },
+  "glass-ribbon": { name: "Glass Ribbon", component: "GlassRibbon", description: "A smoked glass lens holds a folded, voice-reactive spectrum.", accent: "#8be6dc" },
 } as const;
 
 export type PresetName = keyof typeof PRESETS;
