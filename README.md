@@ -1,6 +1,6 @@
 # VoiceKit
 
-Twelve interactive voice-agent presets for React. The Next.js site includes a gallery, component documentation, and a Maison Serein salon example.
+Eighteen interactive voice-agent presets for React. The Next.js site includes a gallery, component documentation, and a Maison Serein salon example.
 
 ## Run locally
 
@@ -16,6 +16,12 @@ Open [localhost:3000](http://localhost:3000). Each preset has a component page w
 Open [the Audio Lab](http://localhost:3000/lab) to tune a preset with the scripted demo, a microphone, or a recording. Choose **Audio file** and **Load real speech sample** for an included LibriSpeech recording, or upload an audio file for local analysis. **Treat as** lets you compare listening and speaking with the same clip. Pause before stepping through individual frames.
 
 **Copy tuned params** returns the preset key and a `motion` object. Pass its `tuning` values through `motion={{ tuning }}` on the matching preset. Attack and release are stored in seconds and output compensation is stored in milliseconds. [Motion reviews](MOTION-REVIEWS.md)
+
+## Sarvam voice playground
+
+Open [/lab/sarvam](http://localhost:3000/lab/sarvam) to try the receptionist with voice or text. Without credentials, MockSarvam plays prerecorded responses and returns a canned transcript for mic input. Start with “How much is a haircut?”
+
+For live recognition and speech, create a new key, copy `.env.example` to `.env.local`, then set `SARVAM_API_KEY` and a separate random `SESSION_SECRET` of at least 32 characters. Restart Next.js. Keep both values server-side. [Sarvam dashboard](https://indus.sarvam.ai/key-management) · [Phase 1 guide](docs/sarvam-phase-1.md)
 
 ## Install from the local shadcn registry
 

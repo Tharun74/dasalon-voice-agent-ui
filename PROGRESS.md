@@ -56,3 +56,9 @@
 - FPS dips during recording playback and capture.
 - The 4× CPU-throttle test is deferred.
 - Committed end-to-end regression tests for the Audio Lab scenarios are deferred. Core motion tests cover the scenario data and timing.
+
+## Sarvam voice pipeline
+
+- Phase 1 adds `/lab/sarvam`, the package’s `/sarvam` adapter, MockSarvam and the signed session, STT, chat and TTS handlers. The playground drives all 18 presets through the existing adapter contract.
+- The HTTP path uses bounded WAV submissions with client VAD, optional snapshot captions, streamed fact selection and PCM playback. TTS requires a short-lived grant bound to the exact approved sentence.
+- Next is Phase 2 for booking requests, salon integration, more vetted languages and the shadcn adapter registry item. True streaming STT needs a persistent gateway. Live Sarvam evals and room-acoustic tests are pending a rotated server credential. [Phase 1 report](docs/sarvam-phase-1.md)
